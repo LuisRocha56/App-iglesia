@@ -19,6 +19,8 @@ El frontend es estático y se publica en Vercel. La API Express corre en Render 
 
 El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan su rol y reciben la categoría Congregación por defecto.
 
+Al abrir `index.html`, si el navegador conserva un token de sesión válido, la página lo comprueba con el API y abre `Inicio.html` automáticamente. Si el token venció, se elimina y se solicita iniciar sesión otra vez. Si el API no responde, el token se conserva. Las sesiones actuales duran 8 horas; borrar los datos del navegador también cierra la sesión.
+
 ## Publicación
 
 ### Render (API)

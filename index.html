@@ -350,6 +350,7 @@
         let mode = new URLSearchParams(window.location.search).get('modo') === 'login'
             ? 'login'
             : 'register';
+
         function setMode(nextMode, updateUrl = true) {
             mode = nextMode;
             const registering = mode === 'register';
@@ -378,6 +379,29 @@
         modeToggle.addEventListener('click', () => {
             setMode(mode === 'register' ? 'login' : 'register');
         });
+
+        async function restoreSession() {
+            if (!MiIglesia.hasToken()) return;
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Comprobando sesión…';
+            formMessage.textContent = 'Estamos comprobando si tu sesión sigue activa.';
+
+            try {
+                await MiIglesia.request('/api/auth/me');
+                window.location.replace('Inicio.html');
+            } catch (error) {
+                if (error.status === 401) {
+                    MiIglesia.clearToken();
+                    formMessage.textContent = 'Tu sesión venció. Inicia sesión para continuar.';
+                } else {
+                    formMessage.textContent = 'No pudimos comprobar tu sesión. Intenta iniciar sesión de nuevo.';
+                }
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = mode === 'register' ? 'Crear cuenta' : 'Iniciar sesión';
+            }
+        }
 
         authForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -413,6 +437,7 @@
         });
 
         setMode(mode, false);
+        restoreSession();
     </script>
 </body>
 </html>

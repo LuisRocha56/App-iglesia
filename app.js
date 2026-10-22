@@ -21,13 +21,18 @@
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || 'No se pudo completar la solicitud.');
+                const error = new Error(result.message || 'No se pudo completar la solicitud.');
+                error.status = response.status;
+                throw error;
             }
 
             return result;
         },
         saveToken(token) {
             localStorage.setItem(tokenKey, token);
+        },
+        hasToken() {
+            return Boolean(localStorage.getItem(tokenKey));
         },
         clearToken() {
             localStorage.removeItem(tokenKey);
