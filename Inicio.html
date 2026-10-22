@@ -309,6 +309,19 @@
         .inline-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
         .text-link { color:var(--blue); font-weight:700; overflow-wrap:anywhere; }
         .prayer-pending { border-left:4px solid #e6a700; }
+        .notification-count { display:inline-grid; min-width:20px; height:20px; place-items:center; padding:0 5px; border-radius:999px; background:#b42318; color:white; font-size:11px; }
+        .directory-group { margin-top:18px; }
+        .directory-search { width:100%; min-height:40px; margin:10px 0; padding:9px 11px; border:1px solid #d8deea; border-radius:9px; font:inherit; }
+        .song-table-wrap { overflow-x:auto; margin-top:12px; }
+        .song-table { width:100%; border-collapse:collapse; text-align:left; }
+        .song-table th, .song-table td { padding:11px; border-bottom:1px solid var(--line); vertical-align:top; }
+        .song-table th { color:var(--navy); font-size:13px; }
+        .song-table td { color:var(--muted); font-size:13px; }
+        .feed-image { display:block; max-width:min(100%,520px); max-height:320px; margin-top:10px; border-radius:10px; object-fit:contain; }
+        .pending-dialog { width:min(92vw,560px); max-height:85vh; overflow:auto; border:1px solid var(--line); border-radius:16px; padding:22px; color:var(--ink); }
+        .pending-dialog::backdrop { background:rgba(0,10,30,.55); }
+        .pending-dialog h2 { color:var(--navy); }
+        .directory-list[hidden] { display:none !important; }
         [hidden] { display:none !important; }
 
         @media (max-width: 650px) {
@@ -354,7 +367,7 @@
             <button class="menu-link" type="button" data-view="services">Eventos y cultos</button>
             <button class="menu-link" type="button" data-view="prayers">Peticiones de oración</button>
             <button class="menu-link" type="button" data-view="profile">Mi perfil</button>
-            <button class="menu-link" type="button" data-view="coordination" hidden>Coordinación</button>
+            <button class="menu-link" type="button" data-view="coordination" hidden>Coordinación <span id="pendingPrayerBadge" class="notification-count" hidden>0</span></button>
             <button class="menu-link" type="button" data-view="songs" hidden>Repertorio</button>
             <button class="menu-link" type="button" data-view="media" hidden>Multimedia</button>
             <button class="menu-link" type="button" data-view="sound" hidden>Sonido</button>
@@ -401,6 +414,15 @@
                 <label class="form-field full">Correo
                     <input name="email" type="email" maxlength="255" required>
                 </label>
+                <label class="form-field">Calle
+                    <input name="addressStreet" maxlength="200" required>
+                </label>
+                <label class="form-field">Colonia
+                    <input name="addressNeighborhood" maxlength="150" required>
+                </label>
+                <label class="form-field">Número de casa
+                    <input name="houseNumber" maxlength="30" required>
+                </label>
                 <button class="action-button" type="submit">Guardar mis datos</button>
             </form>
             <form id="passwordForm" class="form-grid password-form">
@@ -427,6 +449,9 @@
                 <label class="form-field full">Contenido
                     <textarea name="body" maxlength="4000" required></textarea>
                 </label>
+                <label class="form-field full">Imagen opcional
+                    <input name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+                </label>
                 <button class="action-button" type="submit">Publicar anuncio</button>
                 <button class="action-button" id="cancelAnnouncementEdit" type="button" hidden>Cancelar edición</button>
             </form>
@@ -434,7 +459,15 @@
             <h3>Peticiones por aprobar</h3>
             <div class="feed-list" id="pendingPrayerList"></div>
             <h3>Directorio de miembros</h3>
-            <div class="directory-list" id="directoryList"></div>
+            <input class="directory-search" id="directorySearch" type="search" placeholder="Buscar por nombre…" aria-label="Buscar miembros por nombre">
+            <div class="directory-group">
+                <h4>Grupo de alabanza</h4>
+                <div class="directory-list" id="worshipDirectoryList"></div>
+            </div>
+            <div class="directory-group">
+                <h4>Iglesia general</h4>
+                <div class="directory-list" id="generalDirectoryList"></div>
+            </div>
         </section>
 
         <section class="panel role-access" id="musicianPanel" data-view-section="songs" hidden>
@@ -444,8 +477,11 @@
                 <label class="form-field">Canción
                     <input name="title" maxlength="160" required>
                 </label>
-                <label class="form-field">Artista
-                    <input name="artist" maxlength="160">
+                <label class="form-field">Autor
+                    <input name="author" maxlength="160">
+                </label>
+                <label class="form-field role-option">
+                    <input name="hasSequence" type="checkbox" value="true"> Tiene secuencia
                 </label>
                 <label class="form-field full">Letra
                     <textarea name="lyrics" maxlength="12000"></textarea>
@@ -459,12 +495,17 @@
                 <button class="action-button" type="submit">Agregar canción</button>
             </form>
             <p class="status" id="songStatus" role="status" aria-live="polite"></p>
-            <div class="feed-list" id="songList"></div>
+            <div class="song-table-wrap">
+                <table class="song-table">
+                    <thead><tr><th>Canto</th><th>Autor</th><th>Secuencia</th><th>Última vez tocado</th><th>Recursos</th></tr></thead>
+                    <tbody id="songList"></tbody>
+                </table>
+            </div>
         </section>
 
         <section class="panel role-access" id="multimediaPanel" data-view-section="media" hidden>
             <h2>Multimedia</h2>
-            <p>Consulta anuncios, el cronograma de servicios y el banco de recursos visuales.</p>
+            <p>Consulta anuncios, el cronograma de servicios y el banco de recursos visuales. Los archivos se guardan en la <a class="text-link" href="https://drive.google.com/drive/folders/1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh?usp=sharing" target="_blank" rel="noopener noreferrer">carpeta de Multimedia en Drive</a>.</p>
             <form class="form-grid" id="resourceForm" hidden>
                 <label class="form-field">Nombre
                     <input name="title" maxlength="160" required>
@@ -472,13 +513,13 @@
                 <label class="form-field">Tipo de recurso
                     <select name="category"><option>Imagen</option><option>Video</option><option>Logo</option><option>Banner</option><option>Otro</option></select>
                 </label>
-                <label class="form-field full">Enlace de Drive
-                    <input name="url" type="url" maxlength="1000" placeholder="https://drive.google.com/drive/folders/REEMPLAZA_CON_ID_DE_CARPETA" required>
+                <label class="form-field full">Imagen para subir a Drive
+                    <input name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
                 </label>
                 <label class="form-field full">Descripción
                     <input name="description" maxlength="500">
                 </label>
-                <button class="action-button" type="submit">Agregar enlace</button>
+                <button class="action-button" type="submit">Subir imagen</button>
             </form>
             <p class="status" id="resourceStatus" role="status" aria-live="polite"></p>
             <div class="feed-list" id="resourceList"></div>
@@ -501,6 +542,19 @@
             </form>
             <p class="status" id="soundStatus" role="status" aria-live="polite"></p>
             <div class="feed-list" id="monitorList"></div>
+            <h3>Manuales y archivos técnicos</h3>
+            <p>Los documentos se almacenan en la <a class="text-link" href="https://drive.google.com/drive/folders/1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP?usp=sharing" target="_blank" rel="noopener noreferrer">carpeta de Sonido en Drive</a>.</p>
+            <form class="form-grid" id="soundFileForm">
+                <label class="form-field">Nombre del archivo
+                    <input name="title" maxlength="160" required>
+                </label>
+                <label class="form-field">Manual PDF, Word o PowerPoint
+                    <input name="file" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" required>
+                </label>
+                <button class="action-button" type="submit">Subir manual</button>
+            </form>
+            <p class="status" id="soundFileStatus" role="status" aria-live="polite"></p>
+            <div class="feed-list" id="soundFileList"></div>
         </section>
 
         <section class="panel role-access" id="servicesPanel" data-view-section="services" hidden>
@@ -528,6 +582,9 @@
                         <label class="form-field full">Detalles
                             <textarea name="details" maxlength="2000"></textarea>
                         </label>
+                        <label class="form-field full">Cantos del servicio (Ctrl/Cmd para seleccionar varios)
+                            <select name="songIds" id="serviceSongSelect" multiple size="6"></select>
+                        </label>
                         <button class="action-button" type="submit">Guardar evento</button>
                         <button class="action-button" id="cancelServiceEdit" type="button" hidden>Cancelar edición</button>
                     </div>
@@ -550,6 +607,12 @@
             </div>
             <div class="service-list" id="serviceList"></div>
         </section>
+        <dialog class="pending-dialog" id="pendingPrayerDialog" aria-labelledby="pendingPrayerTitle">
+            <h2 id="pendingPrayerTitle">Peticiones por revisar</h2>
+            <p>Hay peticiones de oración pendientes de aprobación. Esta ventana solo muestra la información; puedes gestionarlas en el apartado de Coordinación.</p>
+            <div class="feed-list" id="pendingPrayerDialogList"></div>
+            <form method="dialog"><button class="action-button" type="submit">Cerrar</button></form>
+        </dialog>
 
         <section class="panel role-access" id="masterPanel" data-view-section="admin" hidden>
             <h2>Administración general</h2>
@@ -639,6 +702,9 @@
         let canManageServices = false;
         let canManageCommunity = false;
         let canSeeTeam = false;
+        let pendingPrayers = [];
+        let pendingDialogShown = false;
+        let menuPermissions = {};
         let currentUserId = '';
         let currentUserAreas = [];
         const positionSelect = document.querySelector('#assignmentForm [name="position"]');
@@ -668,9 +734,25 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        function updateMenuAvailability(profileComplete) {
+            document.querySelectorAll('.menu-link').forEach((button) => {
+                button.hidden = !menuPermissions[button.dataset.view]
+                    || (!profileComplete && button.dataset.view !== 'profile');
+            });
+        }
+
+        function showPendingPrayerDialogIfNeeded() {
+            if (!canManageCommunity || !pendingPrayers.length || pendingDialogShown) return;
+            pendingDialogShown = true;
+            document.getElementById('pendingPrayerDialog').showModal();
+        }
+
         document.getElementById('appMenu').addEventListener('click', (event) => {
             const button = event.target.closest('[data-view]');
-            if (button && !button.hidden) setActiveView(button.dataset.view);
+            if (button && !button.hidden) {
+                setActiveView(button.dataset.view);
+                if (button.dataset.view === 'coordination') showPendingPrayerDialogIfNeeded();
+            }
         });
 
         async function loadUsers(currentUserId) {
@@ -845,6 +927,14 @@
                 addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
                 addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
                 if (service.details) addTextElement(card, 'p', 'service-details', service.details);
+                if (service.songs?.length) {
+                    addTextElement(
+                        card,
+                        'p',
+                        'service-details',
+                        `Cantos: ${service.songs.map((song) => song.title).join(', ')}`
+                    );
+                }
                 if (canSeeTeam && service.assignments.length) {
                     const assignments = document.createElement('div');
                     assignments.className = 'assignment-list';
@@ -893,6 +983,14 @@
                 addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
                 addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
                 if (service.details) addTextElement(card, 'p', 'service-details', service.details);
+                if (service.songs?.length) {
+                    addTextElement(
+                        card,
+                        'p',
+                        'service-details',
+                        `Cantos: ${service.songs.map((song) => song.title).join(', ')}`
+                    );
+                }
                 if (canManageServices) {
                     const actions = document.createElement('div');
                     actions.className = 'assignment-list';
@@ -909,6 +1007,10 @@
                         date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
                         form.elements.startsAt.value = date.toISOString().slice(0, 16);
                         form.elements.details.value = service.details || '';
+                        const selectedSongIds = new Set((service.songs || []).map((song) => String(song.id)));
+                        [...form.elements.songIds.options].forEach((option) => {
+                            option.selected = selectedSongIds.has(option.value);
+                        });
                         form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
                         document.getElementById('cancelServiceEdit').hidden = false;
                         form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -994,17 +1096,45 @@
         async function loadDirectory() {
             const { users } = await MiIglesia.request('/api/team/directory');
             directoryUsers = users;
-            const directoryList = document.getElementById('directoryList');
-            directoryList.replaceChildren();
-            users.forEach((user) => {
-                const row = document.createElement('div');
-                row.className = 'directory-row';
-                addTextElement(row, 'div', 'user-name', user.nombre);
-                addTextElement(row, 'div', 'user-meta', `${user.telefono} · ${user.email}`);
-                directoryList.appendChild(row);
-            });
+            renderDirectory();
             refreshAssignmentOptions();
         }
+
+        function renderDirectory() {
+            const query = document.getElementById('directorySearch').value.trim().toLocaleLowerCase('es-MX');
+            const worshipList = document.getElementById('worshipDirectoryList');
+            const generalList = document.getElementById('generalDirectoryList');
+            worshipList.replaceChildren();
+            generalList.replaceChildren();
+            const worshipUsers = directoryUsers.filter((user) =>
+                getUserAreas(user).some((area) => [1, 2, 3, 4, 5].includes(area))
+            );
+            const generalUsers = directoryUsers.filter((user) =>
+                !getUserAreas(user).some((area) => [1, 2, 3, 4, 5].includes(area))
+            );
+            for (const [users, list] of [[worshipUsers, worshipList], [generalUsers, generalList]]) {
+                const matchingUsers = users.filter((user) =>
+                    user.nombre.toLocaleLowerCase('es-MX').includes(query)
+                );
+                matchingUsers.forEach((user) => {
+                    const row = document.createElement('div');
+                    row.className = 'directory-row';
+                    addTextElement(row, 'div', 'user-name', user.nombre);
+                    addTextElement(row, 'div', 'user-meta', `${user.telefono} · ${user.email}`);
+                    list.appendChild(row);
+                });
+                if (!matchingUsers.length) {
+                    addTextElement(
+                        list,
+                        'p',
+                        'empty-state',
+                        query ? 'Sin coincidencias.' : 'No hay miembros en este grupo.'
+                    );
+                }
+            }
+        }
+
+        document.getElementById('directorySearch').addEventListener('input', renderDirectory);
 
         async function loadAuditLogs() {
             const { logs } = await MiIglesia.request('/api/admin/audit-logs');
@@ -1046,6 +1176,14 @@
                 card.className = 'feed-card';
                 addTextElement(card, 'h3', '', announcement.title);
                 addTextElement(card, 'p', '', announcement.body);
+                if (announcement.image_url) {
+                    const image = document.createElement('img');
+                    image.className = 'feed-image';
+                    image.src = announcement.image_url;
+                    image.alt = `Imagen del anuncio ${announcement.title}`;
+                    image.loading = 'lazy';
+                    card.appendChild(image);
+                }
                 addTextElement(card, 'div', 'feed-meta', formatServiceDate(announcement.created_at));
                 if (canManageCommunity) {
                     const actions = document.createElement('div');
@@ -1084,8 +1222,17 @@
             const { prayers } = await MiIglesia.request('/api/prayers');
             const prayerList = document.getElementById('prayerList');
             const pendingList = document.getElementById('pendingPrayerList');
+            const dialogList = document.getElementById('pendingPrayerDialogList');
+            pendingPrayers = prayers.filter((prayer) => prayer.status === 'pending');
             prayerList.replaceChildren();
             if (pendingList) pendingList.replaceChildren();
+            dialogList.replaceChildren();
+            const badge = document.getElementById('pendingPrayerBadge');
+            badge.textContent = String(pendingPrayers.length);
+            badge.hidden = !canManageCommunity || pendingPrayers.length === 0;
+            if (document.querySelector('[data-view="coordination"]')?.getAttribute('aria-current') === 'page') {
+                showPendingPrayerDialogIfNeeded();
+            }
             prayers.forEach((prayer) => {
                 const card = document.createElement('article');
                 card.className = `feed-card${prayer.status === 'pending' ? ' prayer-pending' : ''}`;
@@ -1139,8 +1286,23 @@
                     pendingList.appendChild(pendingCard);
                 }
             });
+            pendingPrayers.forEach((prayer) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card prayer-pending';
+                addTextElement(card, 'p', '', prayer.body);
+                addTextElement(
+                    card,
+                    'div',
+                    'feed-meta',
+                    `${prayer.author_name} · ${formatServiceDate(prayer.created_at)}`
+                );
+                dialogList.appendChild(card);
+            });
             if (!prayers.some((prayer) => prayer.status === 'approved' || String(prayer.author_id) === currentUserId)) {
                 addTextElement(prayerList, 'p', 'empty-state', 'Todavía no hay peticiones aprobadas.');
+            }
+            if (!pendingPrayers.length) {
+                addTextElement(dialogList, 'p', 'empty-state', 'No hay peticiones pendientes.');
             }
             if (pendingList && !prayers.some((prayer) => prayer.status === 'pending')) {
                 addTextElement(pendingList, 'p', 'empty-state', 'No hay peticiones pendientes de aprobación.');
@@ -1160,18 +1322,31 @@
             const list = document.getElementById('songList');
             list.replaceChildren();
             songs.forEach((song) => {
-                const card = document.createElement('article');
-                card.className = 'feed-card';
-                addTextElement(card, 'h3', '', song.title);
-                if (song.artist) addTextElement(card, 'div', 'feed-meta', song.artist);
-                if (song.lyrics) addTextElement(card, 'p', '', song.lyrics);
+                const row = document.createElement('tr');
+                const title = document.createElement('td');
+                addTextElement(title, 'strong', '', song.title);
+                if (song.lyrics) {
+                    const lyrics = addTextElement(title, 'details', 'song-lyrics', '');
+                    addTextElement(lyrics, 'summary', '', 'Ver letra');
+                    addTextElement(lyrics, 'p', '', song.lyrics);
+                }
+                row.appendChild(title);
+                addTextElement(row, 'td', '', song.author || '—');
+                addTextElement(row, 'td', '', song.has_sequence ? 'Sí' : 'No');
+                addTextElement(
+                    row,
+                    'td',
+                    '',
+                    song.last_played_at ? formatServiceDate(song.last_played_at) : 'Sin registro'
+                );
+                const resourceCell = document.createElement('td');
                 const links = document.createElement('div');
                 links.className = 'inline-actions';
                 addExternalLink(links, 'Acordes', song.chords_url);
                 addExternalLink(links, 'Partitura', song.sheet_url);
-                card.appendChild(links);
+                resourceCell.appendChild(links);
                 if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) {
-                    const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar canción');
+                    const remove = addTextElement(resourceCell, 'button', 'remove-assignment', 'Eliminar');
                     remove.type = 'button';
                     remove.addEventListener('click', async () => {
                         try {
@@ -1182,9 +1357,25 @@
                         }
                     });
                 }
-                list.appendChild(card);
+                row.appendChild(resourceCell);
+                list.appendChild(row);
             });
-            if (!songs.length) addTextElement(list, 'p', 'empty-state', 'El repertorio está vacío.');
+            if (!songs.length) {
+                const row = document.createElement('tr');
+                const cell = addTextElement(row, 'td', 'empty-state', 'El repertorio está vacío.');
+                cell.colSpan = 5;
+                list.appendChild(row);
+            }
+            const songSelect = document.getElementById('serviceSongSelect');
+            const selectedIds = new Set([...songSelect.selectedOptions].map((option) => option.value));
+            songSelect.replaceChildren();
+            songs.forEach((song) => {
+                const option = document.createElement('option');
+                option.value = String(song.id);
+                option.textContent = `${song.title}${song.author ? ` · ${song.author}` : ''}`;
+                option.selected = selectedIds.has(option.value);
+                songSelect.appendChild(option);
+            });
         }
 
         async function loadResources() {
@@ -1197,7 +1388,15 @@
                 addTextElement(card, 'h3', '', resource.title);
                 addTextElement(card, 'div', 'feed-meta', resource.category);
                 if (resource.description) addTextElement(card, 'p', '', resource.description);
-                addExternalLink(card, 'Abrir recurso', resource.url);
+                if (resource.drive_file_id && resource.url) {
+                    const image = document.createElement('img');
+                    image.className = 'feed-image';
+                    image.src = resource.url;
+                    image.alt = resource.title;
+                    image.loading = 'lazy';
+                    card.appendChild(image);
+                    addExternalLink(card, 'Abrir en Google Drive', resource.url);
+                } else addExternalLink(card, 'Abrir recurso', resource.url);
                 if (currentUserAreas.some((area) => [2, 3, 5].includes(area))) {
                     const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar enlace');
                     remove.type = 'button';
@@ -1212,7 +1411,34 @@
                 }
                 list.appendChild(card);
             });
-            if (!resources.length) addTextElement(list, 'p', 'empty-state', 'Agrega enlaces a los recursos compartidos de Drive.');
+            if (!resources.length) addTextElement(list, 'p', 'empty-state', 'Todavía no hay imágenes en la biblioteca.');
+        }
+
+        async function loadSoundFiles() {
+            const { files } = await MiIglesia.request('/api/sound-files');
+            const list = document.getElementById('soundFileList');
+            list.replaceChildren();
+            files.forEach((file) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card';
+                addExternalLink(card, file.title, file.url);
+                addTextElement(card, 'div', 'feed-meta',
+                    `${file.uploader} · ${formatServiceDate(file.created_at)}`);
+                if (currentUserAreas.some((area) => [2, 4, 5].includes(area))) {
+                    const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar archivo');
+                    remove.type = 'button';
+                    remove.addEventListener('click', async () => {
+                        try {
+                            await MiIglesia.request(`/api/sound-files/${encodeURIComponent(file.id)}`, { method: 'DELETE' });
+                            await loadSoundFiles();
+                        } catch (error) {
+                            document.getElementById('soundFileStatus').textContent = error.message;
+                        }
+                    });
+                }
+                list.appendChild(card);
+            });
+            if (!files.length) addTextElement(list, 'p', 'empty-state', 'Aún no se han subido manuales.');
         }
 
         async function loadMonitorNotes() {
@@ -1247,7 +1473,8 @@
                     title: String(data.get('title')).trim(),
                     eventType: data.get('eventType'),
                         startsAt: new Date(data.get('startsAt')).toISOString(),
-                        details: String(data.get('details') || '').trim()
+                        details: String(data.get('details') || '').trim(),
+                        songIds: data.getAll('songIds')
                     })
                     }
                 );
@@ -1356,13 +1583,17 @@
                     announcementId
                         ? `/api/announcements/${encodeURIComponent(announcementId)}`
                         : '/api/announcements',
-                    {
-                    method: announcementId ? 'PATCH' : 'POST',
-                    body: JSON.stringify({
-                        title: data.get('title'),
-                        body: data.get('body')
-                    })
-                    }
+                    (() => {
+                        const payload = new FormData();
+                        payload.set('title', String(data.get('title') || ''));
+                        payload.set('body', String(data.get('body') || ''));
+                        const image = form.elements.image.files[0];
+                        if (image) payload.set('image', image);
+                        return {
+                            method: announcementId ? 'PATCH' : 'POST',
+                            body: payload
+                        };
+                    })()
                 );
                 form.reset();
                 button.textContent = 'Publicar anuncio';
@@ -1416,7 +1647,8 @@
                     method: 'POST',
                     body: JSON.stringify({
                         title: data.get('title'),
-                        artist: data.get('artist'),
+                        author: data.get('author'),
+                        hasSequence: data.get('hasSequence') === 'true',
                         lyrics: data.get('lyrics'),
                         chordsUrl: data.get('chordsUrl'),
                         sheetUrl: data.get('sheetUrl')
@@ -1435,24 +1667,39 @@
         document.getElementById('resourceForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const form = event.currentTarget;
-            const data = new FormData(form);
             const button = form.querySelector('button[type="submit"]');
             button.disabled = true;
             try {
+                const payload = new FormData(form);
                 await MiIglesia.request('/api/resources', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        title: data.get('title'),
-                        category: data.get('category'),
-                        url: data.get('url'),
-                        description: data.get('description')
-                    })
+                    body: payload
                 });
                 form.reset();
-                document.getElementById('resourceStatus').textContent = 'Enlace agregado al banco de recursos.';
+                document.getElementById('resourceStatus').textContent = 'Imagen subida al banco de recursos de Drive.';
                 await loadResources();
             } catch (error) {
                 document.getElementById('resourceStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('soundFileForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/sound-files', {
+                    method: 'POST',
+                    body: new FormData(form)
+                });
+                form.reset();
+                document.getElementById('soundFileStatus').textContent = 'Manual subido a Drive.';
+                await loadSoundFiles();
+            } catch (error) {
+                document.getElementById('soundFileStatus').textContent = error.message;
             } finally {
                 button.disabled = false;
             }
@@ -1495,13 +1742,16 @@
                     body: JSON.stringify({
                         nombre: String(data.get('nombre')).trim(),
                         telefono: String(data.get('telefono')).trim(),
-                        email: String(data.get('email')).trim()
+                        email: String(data.get('email')).trim(),
+                        addressStreet: String(data.get('addressStreet')).trim(),
+                        addressNeighborhood: String(data.get('addressNeighborhood')).trim(),
+                        houseNumber: String(data.get('houseNumber')).trim()
                     })
                 });
                 document.getElementById('welcomeName').textContent = user.nombre;
                 document.getElementById('userName').textContent = user.nombre;
-                document.getElementById('appName').textContent = user.church_name || 'Mi Iglesia';
                 document.getElementById('profileStatus').textContent = 'Datos del perfil actualizados.';
+                updateMenuAvailability(true);
             } catch (error) {
                 document.getElementById('profileStatus').textContent = error.message;
             } finally {
@@ -1549,6 +1799,7 @@
 
             document.getElementById('welcomeName').textContent = user.nombre;
             document.getElementById('userName').textContent = user.nombre;
+            document.getElementById('appName').textContent = user.church_name || 'Mi Iglesia';
             const areas = getUserAreas(user);
             currentUserAreas = areas;
             currentUserId = String(user.id);
@@ -1565,17 +1816,28 @@
             profileForm.elements.nombre.value = user.nombre;
             profileForm.elements.telefono.value = user.telefono || '';
             profileForm.elements.email.value = user.email || '';
+            profileForm.elements.addressStreet.value = user.address_street || '';
+            profileForm.elements.addressNeighborhood.value = user.address_neighborhood || '';
+            profileForm.elements.houseNumber.value = user.house_number || '';
+            const profileComplete = Boolean(
+                user.address_street?.trim()
+                && user.address_neighborhood?.trim()
+                && user.house_number?.trim()
+            );
 
             const menuViews = {
+                home: true,
+                services: true,
+                prayers: true,
+                profile: true,
                 coordination: canManageServices,
                 songs: areas.some((area) => [1, 2, 5].includes(area)),
                 media: areas.some((area) => [2, 3, 5].includes(area)),
                 sound: areas.some((area) => [2, 4, 5].includes(area)),
                 admin: isMaster
             };
-            Object.entries(menuViews).forEach(([view, visible]) => {
-                document.querySelector(`[data-view="${view}"]`).hidden = !visible;
-            });
+            menuPermissions = menuViews;
+            updateMenuAvailability(profileComplete);
             document.getElementById('coordinatorPanel').hidden = !canManageServices;
             document.getElementById('musicianPanel').hidden = !menuViews.songs;
             document.getElementById('multimediaPanel').hidden = !menuViews.media;
@@ -1586,7 +1848,11 @@
             document.getElementById('serviceManagement').hidden = !canManageServices;
             document.getElementById('adminPanel').hidden = !isMaster;
             document.getElementById('masterPanel').hidden = !isMaster;
-            setActiveView('home');
+            setActiveView(profileComplete ? 'home' : 'profile');
+            if (!profileComplete) {
+                document.getElementById('profileStatus').textContent =
+                    'Completa tu domicilio para desbloquear las demás secciones.';
+            }
 
             const requests = [
                 [loadServices(), 'servicesStatus'],
@@ -1596,6 +1862,7 @@
             if (areas.some((area) => [1, 2, 5].includes(area))) requests.push([loadSongs(), 'songStatus']);
             if (areas.some((area) => [2, 3, 5].includes(area))) requests.push([loadResources(), 'resourceStatus']);
             if (areas.some((area) => [2, 4, 5].includes(area))) requests.push([loadMonitorNotes(), 'soundStatus']);
+            if (areas.some((area) => [2, 4, 5].includes(area))) requests.push([loadSoundFiles(), 'soundFileStatus']);
             if (canManageServices) requests.push([loadDirectory(), 'servicesStatus']);
             if (isMaster) {
                 requests.push(

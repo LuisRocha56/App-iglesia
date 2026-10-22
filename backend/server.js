@@ -2,15 +2,41 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const { createHash } = require('node:crypto');
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { google } = require('googleapis');
+const multer = require('multer');
 const { Pool } = require('pg');
+const { Readable } = require('node:stream');
+const seedSongs = require('./cantos-getse.json');
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 const databaseUrl = process.env.DATABASE_URL;
 const masterEmail = process.env.MASTER_EMAIL?.trim().toLowerCase();
+const mediaDriveFolderId = '1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh';
+const soundDriveFolderId = '1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP';
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    fileFilter(_req, file, callback) {
+        const allowedTypes = new Set([
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        ]);
+        if (allowedTypes.has(file.mimetype)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Tipo de archivo no permitido.'));
+        }
+    }
+});
 const roleNames = {
     1: 'Músico',
     2: 'Coordinador',
@@ -60,6 +86,141 @@ const pool = new Pool({
         ? { rejectUnauthorized: false }
         : undefined
 });
+let driveClient;
+
+function getDriveClient() {
+    if (driveClient) return driveClient;
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        const error = new Error('La cuenta de servicio de Google Drive no está configurada en el servidor.');
+        error.status = 503;
+        throw error;
+    }
+    let credentials;
+    try {
+        credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    } catch (cause) {
+        const error = new Error('La configuración privada de Google Drive no es JSON válido.');
+        error.status = 503;
+        error.cause = cause;
+        throw error;
+    }
+    const auth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/drive']
+    });
+    driveClient = google.drive({ version: 'v3', auth });
+    return driveClient;
+}
+
+async function uploadToDrive(file, folderId) {
+    if (!file) return null;
+    if (!hasValidFileSignature(file)) {
+        const error = new Error('El contenido del archivo no coincide con su tipo declarado.');
+        error.status = 400;
+        throw error;
+    }
+    const drive = getDriveClient();
+    const result = await drive.files.create({
+        requestBody: {
+            name: `${Date.now()}-${file.originalname.replace(/[\\/]/g, '_').slice(0, 180)}`,
+            mimeType: file.mimetype,
+            parents: [folderId]
+        },
+        media: {
+            mimeType: file.mimetype,
+            body: Readable.from(file.buffer)
+        },
+        fields: 'id,name,mimeType,webViewLink,thumbnailLink'
+    });
+    return result.data;
+}
+
+function hasValidFileSignature(file) {
+    const bytes = file.buffer;
+    const startsWith = (signature) => signature.every((byte, index) => bytes[index] === byte);
+    switch (file.mimetype) {
+        case 'image/jpeg':
+            return startsWith([0xff, 0xd8, 0xff]);
+        case 'image/png':
+            return startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        case 'image/gif':
+            return bytes.subarray(0, 6).toString('ascii').match(/^GIF8[79]a$/) !== null;
+        case 'image/webp':
+            return bytes.subarray(0, 4).toString('ascii') === 'RIFF'
+                && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+        case 'application/pdf':
+            return bytes.subarray(0, 5).toString('ascii') === '%PDF-';
+        case 'application/msword':
+        case 'application/vnd.ms-powerpoint':
+            return startsWith([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+            return startsWith([0x50, 0x4b, 0x03, 0x04]);
+        default:
+            return false;
+    }
+}
+
+async function deleteDriveFile(fileId) {
+    if (!fileId) return;
+    await getDriveClient().files.delete({ fileId });
+}
+
+function parseUpload(middleware) {
+    return (req, res, next) => {
+        middleware(req, res, (error) => {
+            if (!error) {
+                next();
+                return;
+            }
+            const message = error.code === 'LIMIT_FILE_SIZE'
+                ? 'El archivo supera el límite de 10 MB.'
+                : error.message;
+            res.status(
+                error instanceof multer.MulterError || error.message === 'Tipo de archivo no permitido.'
+                    ? 400
+                    : 500
+            )
+                .json({ success: false, message });
+        });
+    };
+}
+
+async function validateSongIds(songIds) {
+    if (!Array.isArray(songIds) || songIds.length > 40
+        || songIds.some((id) => typeof id !== 'string' || !/^[1-9]\d*$/.test(id))
+        || new Set(songIds).size !== songIds.length) {
+        const error = new Error('Selecciona una lista válida de cantos para el evento.');
+        error.status = 400;
+        throw error;
+    }
+    if (!songIds.length) return;
+    const result = await pool.query('SELECT id FROM songs WHERE id = ANY($1::bigint[])', [songIds]);
+    if (result.rowCount !== songIds.length) {
+        const error = new Error('Uno o más cantos seleccionados ya no existen.');
+        error.status = 400;
+        throw error;
+    }
+}
+
+async function saveServiceSongs(eventId, songIds) {
+    await pool.query('DELETE FROM service_songs WHERE event_id = $1', [eventId]);
+    if (songIds.length) {
+        await pool.query(
+            `INSERT INTO service_songs (event_id, song_id)
+             SELECT $1, unnest($2::bigint[])`,
+            [eventId, songIds]
+        );
+    }
+}
+
+function sendRouteError(error, res, next) {
+    if (error.status) {
+        res.status(error.status).json({ success: false, message: error.message });
+        return;
+    }
+    next(error);
+}
 
 app.use(cors({
     origin(origin, callback) {
@@ -261,6 +422,7 @@ app.get('/api/auth/me', getAuthenticatedUser, async (req, res, next) => {
     try {
         const result = await pool.query(
             `SELECT id, nombre, telefono, email, area, role_ids, category,
+                    address_street, address_neighborhood, house_number,
                     (SELECT value FROM app_settings WHERE key = 'church_name') AS church_name
              FROM users WHERE id = $1`,
             [req.auth.sub]
@@ -281,22 +443,33 @@ app.get('/api/auth/me', getAuthenticatedUser, async (req, res, next) => {
 });
 
 app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
-    const { nombre, telefono, email } = req.body || {};
+    const {
+        nombre, telefono, email, addressStreet, addressNeighborhood, houseNumber
+    } = req.body || {};
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (typeof nombre !== 'string' || nombre.trim().length < 2 || nombre.trim().length > 150
         || typeof telefono !== 'string' || telefono.trim().length < 7 || telefono.trim().length > 30
         || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
-        || normalizedEmail.length > 255) {
-        res.status(400).json({ success: false, message: 'Revisa tu nombre, teléfono y correo.' });
+        || normalizedEmail.length > 255
+        || typeof addressStreet !== 'string' || !addressStreet.trim() || addressStreet.trim().length > 200
+        || typeof addressNeighborhood !== 'string' || !addressNeighborhood.trim() || addressNeighborhood.trim().length > 150
+        || typeof houseNumber !== 'string' || !houseNumber.trim() || houseNumber.trim().length > 30) {
+        res.status(400).json({ success: false, message: 'Completa tu nombre, teléfono, correo y domicilio.' });
         return;
     }
 
     try {
         const result = await pool.query(
-            `UPDATE users SET nombre = $1, telefono = $2, email = $3
-             WHERE id = $4
-             RETURNING id, nombre, telefono, email, area, role_ids, category`,
-            [nombre.trim(), telefono.trim(), normalizedEmail, req.auth.sub]
+            `UPDATE users
+             SET nombre = $1, telefono = $2, email = $3,
+                 address_street = $4, address_neighborhood = $5, house_number = $6
+             WHERE id = $7
+             RETURNING id, nombre, telefono, email, area, role_ids, category,
+                       address_street, address_neighborhood, house_number`,
+            [
+                nombre.trim(), telefono.trim(), normalizedEmail,
+                addressStreet.trim(), addressNeighborhood.trim(), houseNumber.trim(), req.auth.sub
+            ]
         );
         if (!result.rows[0]) {
             res.status(401).json({ success: false, message: 'La cuenta ya no está disponible.' });
@@ -356,7 +529,7 @@ app.get('/api/dashboard', getAuthenticatedUser, async (_req, res, next) => {
 app.get('/api/team/directory', getAuthenticatedUser, requireCoordinator, async (_req, res, next) => {
     try {
         const result = await pool.query(
-            `SELECT id, nombre, email, telefono, role_ids, area
+            `SELECT id, nombre, email, telefono, role_ids, area, category
              FROM users
              ORDER BY nombre, id`
         );
@@ -401,7 +574,22 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
                             ) ORDER BY a.position, u.nombre
                         ) FILTER (WHERE a.id IS NOT NULL),
                         '[]'::json
-                    ) AS assignments
+                    ) AS assignments,
+                    (
+                        SELECT COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', s.id,
+                                    'title', s.title,
+                                    'author', COALESCE(NULLIF(s.author, ''), s.artist)
+                                ) ORDER BY ss.id
+                            ),
+                            '[]'::json
+                        )
+                        FROM service_songs ss
+                        JOIN songs s ON s.id = ss.song_id
+                        WHERE ss.event_id = e.id
+                    ) AS songs
              FROM service_events e
              LEFT JOIN service_assignments a ON a.event_id = e.id AND $1::boolean
              LEFT JOIN users u ON u.id = a.user_id
@@ -419,7 +607,7 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
 });
 
 app.post('/api/services', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
-    const { title, eventType, startsAt, details = '' } = req.body || {};
+    const { title, eventType, startsAt, details = '', songIds = [] } = req.body || {};
     const startDate = typeof startsAt === 'string' ? new Date(startsAt) : null;
     const validTypes = ['Culto', 'Ensayo', 'Evento especial'];
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 120
@@ -431,12 +619,14 @@ app.post('/api/services', getAuthenticatedUser, requireCoordinator, async (req, 
     }
 
     try {
+        await validateSongIds(songIds);
         const result = await pool.query(
             `INSERT INTO service_events (title, event_type, starts_at, details, created_by)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING id, title, event_type, starts_at, details`,
             [title.trim(), eventType, startDate.toISOString(), details.trim(), req.auth.sub]
         );
+        await saveServiceSongs(result.rows[0].id, songIds);
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
              VALUES ($1, 'service.created', 'service_event', $2, $3)`,
@@ -444,13 +634,13 @@ app.post('/api/services', getAuthenticatedUser, requireCoordinator, async (req, 
         );
         res.status(201).json({ success: true, service: { ...result.rows[0], assignments: [] } });
     } catch (error) {
-        next(error);
+        sendRouteError(error, res, next);
     }
 });
 
 app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
     const serviceId = req.params.id;
-    const { title, eventType, startsAt, details = '' } = req.body || {};
+    const { title, eventType, startsAt, details = '', songIds = [] } = req.body || {};
     const startDate = typeof startsAt === 'string' ? new Date(startsAt) : null;
     const validTypes = ['Culto', 'Ensayo', 'Evento especial'];
     if (!/^[1-9]\d*$/.test(serviceId)
@@ -463,6 +653,7 @@ app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (
     }
 
     try {
+        await validateSongIds(songIds);
         const result = await pool.query(
             `UPDATE service_events
              SET title = $1, event_type = $2, starts_at = $3, details = $4
@@ -474,6 +665,7 @@ app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (
             res.status(404).json({ success: false, message: 'No se encontró ese culto o evento.' });
             return;
         }
+        await saveServiceSongs(serviceId, songIds);
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
              VALUES ($1, 'service.updated', 'service_event', $2, $3)`,
@@ -481,7 +673,7 @@ app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (
         );
         res.json({ success: true, service: result.rows[0] });
     } catch (error) {
-        next(error);
+        sendRouteError(error, res, next);
     }
 });
 
@@ -633,7 +825,7 @@ app.patch('/api/services/:serviceId/attendance', getAuthenticatedUser, async (re
 app.get('/api/announcements', getAuthenticatedUser, async (_req, res, next) => {
     try {
         const result = await pool.query(
-            `SELECT id, title, body, created_at
+            `SELECT id, title, body, image_url, created_at
              FROM announcements
              WHERE published = TRUE
              ORDER BY created_at DESC
@@ -645,20 +837,28 @@ app.get('/api/announcements', getAuthenticatedUser, async (_req, res, next) => {
     }
 });
 
-app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
+app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
     const { title, body } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
-        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000) {
-        res.status(400).json({ success: false, message: 'Revisa el título y el contenido del anuncio.' });
+        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000
+        || (req.file && !req.file.mimetype.startsWith('image/'))) {
+        res.status(400).json({ success: false, message: 'Revisa el título, contenido e imagen del anuncio.' });
         return;
     }
+    let uploadedFile;
+    let recordSaved = false;
     try {
+        uploadedFile = req.file ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
+        const imageUrl = uploadedFile
+            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
+            : null;
         const result = await pool.query(
-            `INSERT INTO announcements (title, body, created_by)
-             VALUES ($1, $2, $3)
-             RETURNING id, title, body, created_at`,
-            [title.trim(), body.trim(), req.auth.sub]
+            `INSERT INTO announcements (title, body, image_url, image_drive_file_id, created_by)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, title, body, image_url, created_at`,
+            [title.trim(), body.trim(), imageUrl, uploadedFile?.id || null, req.auth.sub]
         );
+        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'announcement.created', 'announcement', $2)`,
@@ -666,36 +866,77 @@ app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, async (
         );
         res.status(201).json({ success: true, announcement: result.rows[0] });
     } catch (error) {
+        if (uploadedFile?.id && !recordSaved) {
+            try {
+                await deleteDriveFile(uploadedFile.id);
+            } catch (cleanupError) {
+                console.error('No se pudo limpiar la imagen del anuncio tras un error:', cleanupError);
+            }
+        }
         next(error);
     }
 });
 
-app.patch('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
+app.patch('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
     const { title, body } = req.body || {};
     if (!/^[1-9]\d*$/.test(req.params.id)
         || typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
-        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000) {
-        res.status(400).json({ success: false, message: 'Revisa el título y el contenido del anuncio.' });
+        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000
+        || (req.file && !req.file.mimetype.startsWith('image/'))) {
+        res.status(400).json({ success: false, message: 'Revisa el título, contenido e imagen del anuncio.' });
         return;
     }
+    let uploadedFile;
+    let recordSaved = false;
     try {
-        const result = await pool.query(
-            `UPDATE announcements SET title = $1, body = $2
-             WHERE id = $3
-             RETURNING id`,
-            [title.trim(), body.trim(), req.params.id]
+        const previous = await pool.query(
+            'SELECT image_drive_file_id FROM announcements WHERE id = $1',
+            [req.params.id]
         );
-        if (!result.rowCount) {
+        if (!previous.rowCount) {
             res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
             return;
         }
+        uploadedFile = req.file ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
+        const imageUrl = uploadedFile
+            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
+            : null;
+        const result = await pool.query(
+            `UPDATE announcements
+             SET title = $1, body = $2,
+                 image_url = COALESCE($3, image_url),
+                 image_drive_file_id = COALESCE($4, image_drive_file_id)
+             WHERE id = $5
+             RETURNING id`,
+            [title.trim(), body.trim(), imageUrl, uploadedFile?.id || null, req.params.id]
+        );
+        if (!result.rowCount) {
+            if (uploadedFile?.id) await deleteDriveFile(uploadedFile.id);
+            res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
+            return;
+        }
+        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'announcement.updated', 'announcement', $2)`,
             [req.auth.sub, req.params.id]
         );
+        if (uploadedFile && previous.rows[0].image_drive_file_id) {
+            try {
+                await deleteDriveFile(previous.rows[0].image_drive_file_id);
+            } catch (cleanupError) {
+                console.error('No se pudo eliminar la imagen anterior del anuncio:', cleanupError);
+            }
+        }
         res.json({ success: true });
     } catch (error) {
+        if (uploadedFile?.id && !recordSaved) {
+            try {
+                await deleteDriveFile(uploadedFile.id);
+            } catch (cleanupError) {
+                console.error('No se pudo limpiar la imagen del anuncio tras un error:', cleanupError);
+            }
+        }
         next(error);
     }
 });
@@ -706,14 +947,21 @@ app.delete('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, a
         return;
     }
     try {
+        const existing = await pool.query(
+            'SELECT image_drive_file_id FROM announcements WHERE id = $1',
+            [req.params.id]
+        );
+        if (!existing.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
+            return;
+        }
+        if (existing.rows[0].image_drive_file_id) {
+            await deleteDriveFile(existing.rows[0].image_drive_file_id);
+        }
         const result = await pool.query(
             'DELETE FROM announcements WHERE id = $1 RETURNING id',
             [req.params.id]
         );
-        if (!result.rowCount) {
-            res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
-            return;
-        }
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'announcement.deleted', 'announcement', $2)`,
@@ -856,7 +1104,16 @@ app.delete('/api/prayers/:id/support', getAuthenticatedUser, async (req, res, ne
 app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
-            'SELECT id, title, artist, lyrics, chords_url, sheet_url FROM songs ORDER BY title LIMIT 200'
+            `SELECT s.id, s.title,
+                    COALESCE(NULLIF(s.author, ''), s.artist) AS author,
+                    s.has_sequence, s.lyrics, s.chords_url, s.sheet_url,
+                    MAX(e.starts_at) FILTER (WHERE e.starts_at <= NOW()) AS last_played_at
+             FROM songs s
+             LEFT JOIN service_songs ss ON ss.song_id = s.id
+             LEFT JOIN service_events e ON e.id = ss.event_id
+             GROUP BY s.id
+             ORDER BY s.title
+             LIMIT 500`
         );
         res.json({ success: true, songs: result.rows });
     } catch (error) {
@@ -865,9 +1122,14 @@ app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (_req
 });
 
 app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req, res, next) => {
-    const { title, artist = '', lyrics = '', chordsUrl = '', sheetUrl = '' } = req.body || {};
+    const {
+        title, author = '', artist = '', hasSequence = false,
+        lyrics = '', chordsUrl = '', sheetUrl = ''
+    } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
+        || typeof author !== 'string' || author.length > 160
         || typeof artist !== 'string' || artist.length > 160
+        || typeof hasSequence !== 'boolean'
         || typeof lyrics !== 'string' || lyrics.length > 12000
         || (chordsUrl && !validHttpUrl(chordsUrl)) || (sheetUrl && !validHttpUrl(sheetUrl))) {
         res.status(400).json({ success: false, message: 'Revisa los datos y enlaces de la canción.' });
@@ -875,10 +1137,13 @@ app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req
     }
     try {
         const result = await pool.query(
-            `INSERT INTO songs (title, artist, lyrics, chords_url, sheet_url, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING id, title, artist, lyrics, chords_url, sheet_url`,
-            [title.trim(), artist.trim(), lyrics.trim(), chordsUrl || null, sheetUrl || null, req.auth.sub]
+            `INSERT INTO songs (title, author, artist, has_sequence, lyrics, chords_url, sheet_url, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, title, author, has_sequence, lyrics, chords_url, sheet_url`,
+            [
+                title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
+                lyrics.trim(), chordsUrl || null, sheetUrl || null, req.auth.sub
+            ]
         );
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
@@ -916,7 +1181,7 @@ app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), asyn
 app.get('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
-            'SELECT id, title, category, url, description FROM media_resources ORDER BY category, title LIMIT 200'
+            'SELECT id, title, category, url, drive_file_id, description FROM media_resources ORDER BY category, title LIMIT 200'
         );
         res.json({ success: true, resources: result.rows });
     } catch (error) {
@@ -924,22 +1189,28 @@ app.get('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async (
     }
 });
 
-app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async (req, res, next) => {
-    const { title, category, url, description = '' } = req.body || {};
+app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseUpload(upload.single('file')), async (req, res, next) => {
+    const { title, category, description = '' } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
         || typeof category !== 'string' || !['Imagen', 'Video', 'Logo', 'Banner', 'Otro'].includes(category)
-        || !validHttpUrl(url)
+        || !req.file || !req.file.mimetype.startsWith('image/')
         || typeof description !== 'string' || description.length > 500) {
-        res.status(400).json({ success: false, message: 'Revisa el nombre, categoría y enlace del recurso.' });
+        res.status(400).json({ success: false, message: 'Selecciona una imagen e ingresa un nombre y categoría válidos.' });
         return;
     }
+    let uploadedFile;
+    let recordSaved = false;
     try {
+        uploadedFile = await uploadToDrive(req.file, mediaDriveFolderId);
+        const resourceUrl = uploadedFile.thumbnailLink
+            || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`;
         const result = await pool.query(
-            `INSERT INTO media_resources (title, category, url, description, created_by)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO media_resources (title, category, url, drive_file_id, description, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, title, category, url, description`,
-            [title.trim(), category, url.trim(), description.trim(), req.auth.sub]
+            [title.trim(), category, resourceUrl, uploadedFile.id, description.trim(), req.auth.sub]
         );
+        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'resource.created', 'media_resource', $2)`,
@@ -947,6 +1218,13 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async 
         );
         res.status(201).json({ success: true, resource: result.rows[0] });
     } catch (error) {
+        if (uploadedFile?.id && !recordSaved) {
+            try {
+                await deleteDriveFile(uploadedFile.id);
+            } catch (cleanupError) {
+                console.error('No se pudo limpiar el recurso de Drive tras un error:', cleanupError);
+            }
+        }
         next(error);
     }
 });
@@ -957,11 +1235,18 @@ app.delete('/api/resources/:id', getAuthenticatedUser, requireAreas([2, 3, 5]), 
         return;
     }
     try {
-        const result = await pool.query('DELETE FROM media_resources WHERE id = $1 RETURNING id', [req.params.id]);
-        if (!result.rowCount) {
+        const existing = await pool.query(
+            'SELECT drive_file_id FROM media_resources WHERE id = $1',
+            [req.params.id]
+        );
+        if (!existing.rowCount) {
             res.status(404).json({ success: false, message: 'No se encontró ese recurso.' });
             return;
         }
+        if (existing.rows[0].drive_file_id) {
+            await deleteDriveFile(existing.rows[0].drive_file_id);
+        }
+        const result = await pool.query('DELETE FROM media_resources WHERE id = $1 RETURNING id', [req.params.id]);
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'resource.deleted', 'media_resource', $2)`,
@@ -1012,6 +1297,83 @@ app.post('/api/monitor-notes', getAuthenticatedUser, requireAreas([2, 4, 5]), as
             ]
         );
         res.status(201).json({ success: true, note: result.rows[0] });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), async (_req, res, next) => {
+    try {
+        const result = await pool.query(
+            `SELECT f.id, f.title, f.url, f.mime_type, f.created_at, u.nombre AS uploader
+             FROM sound_files f
+             JOIN users u ON u.id = f.uploaded_by
+             ORDER BY f.created_at DESC
+             LIMIT 100`
+        );
+        res.json({ success: true, files: result.rows });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), parseUpload(upload.single('file')), async (req, res, next) => {
+    const title = req.body?.title;
+    if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
+        || !req.file || req.file.mimetype.startsWith('image/')) {
+        res.status(400).json({ success: false, message: 'Selecciona un manual PDF, Word o PowerPoint y escribe su nombre.' });
+        return;
+    }
+    let uploadedFile;
+    let recordSaved = false;
+    try {
+        uploadedFile = await uploadToDrive(req.file, soundDriveFolderId);
+        const url = uploadedFile.webViewLink
+            || `https://drive.google.com/file/d/${encodeURIComponent(uploadedFile.id)}/view`;
+        const result = await pool.query(
+            `INSERT INTO sound_files (title, drive_file_id, url, mime_type, uploaded_by)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, title, drive_file_id, url, mime_type, created_at`,
+            [title.trim(), uploadedFile.id, url, req.file.mimetype, req.auth.sub]
+        );
+        recordSaved = true;
+        await pool.query(
+            `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
+             VALUES ($1, 'sound.manual.uploaded', 'sound_file', $2)`,
+            [req.auth.sub, result.rows[0].id]
+        );
+        res.status(201).json({ success: true, file: result.rows[0] });
+    } catch (error) {
+        if (uploadedFile?.id && !recordSaved) {
+            try {
+                await deleteDriveFile(uploadedFile.id);
+            } catch (cleanupError) {
+                console.error('No se pudo limpiar el manual de Drive tras un error:', cleanupError);
+            }
+        }
+        next(error);
+    }
+});
+
+app.delete('/api/sound-files/:id', getAuthenticatedUser, requireAreas([2, 4, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El archivo no es válido.' });
+        return;
+    }
+    try {
+        const existing = await pool.query('SELECT drive_file_id FROM sound_files WHERE id = $1', [req.params.id]);
+        if (!existing.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró ese archivo.' });
+            return;
+        }
+        await deleteDriveFile(existing.rows[0].drive_file_id);
+        await pool.query('DELETE FROM sound_files WHERE id = $1', [req.params.id]);
+        await pool.query(
+            `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
+             VALUES ($1, 'sound.manual.deleted', 'sound_file', $2)`,
+            [req.auth.sub, req.params.id]
+        );
+        res.json({ success: true });
     } catch (error) {
         next(error);
     }
@@ -1219,7 +1581,11 @@ app.patch('/api/admin/users/:id/role', getAuthenticatedUser, requireMaster, asyn
 
 app.use((error, _req, res, _next) => {
     console.error('Error en el servidor:', error);
-    res.status(500).json({ success: false, message: 'Ocurrió un error en el servidor.' });
+    const status = error.status === 403 ? 503 : error.status || 500;
+    const message = status < 500 || status === 503
+        ? error.message
+        : 'Ocurrió un error en el servidor.';
+    res.status(status).json({ success: false, message });
 });
 
 async function startServer() {
@@ -1233,6 +1599,9 @@ async function startServer() {
             area INTEGER NOT NULL DEFAULT 6,
             role_ids INTEGER[] NOT NULL DEFAULT ARRAY[6]::INTEGER[],
             category VARCHAR(20) NOT NULL DEFAULT 'congregation',
+            address_street VARCHAR(200) NOT NULL DEFAULT '',
+            address_neighborhood VARCHAR(150) NOT NULL DEFAULT '',
+            house_number VARCHAR(30) NOT NULL DEFAULT '',
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
@@ -1243,6 +1612,12 @@ async function startServer() {
     await pool.query(`
         ALTER TABLE users
         ADD COLUMN IF NOT EXISTS role_ids INTEGER[]
+    `);
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS address_street VARCHAR(200) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS address_neighborhood VARCHAR(150) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS house_number VARCHAR(30) NOT NULL DEFAULT ''
     `);
     await pool.query(`
         UPDATE users SET role_ids = ARRAY[area]::INTEGER[] WHERE role_ids IS NULL
@@ -1305,10 +1680,17 @@ async function startServer() {
             id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
             title VARCHAR(160) NOT NULL,
             body TEXT NOT NULL,
+            image_url TEXT,
+            image_drive_file_id VARCHAR(100),
             published BOOLEAN NOT NULL DEFAULT TRUE,
             created_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+    `);
+    await pool.query(`
+        ALTER TABLE announcements
+        ADD COLUMN IF NOT EXISTS image_url TEXT,
+        ADD COLUMN IF NOT EXISTS image_drive_file_id VARCHAR(100)
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS prayer_requests (
@@ -1335,11 +1717,52 @@ async function startServer() {
             id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
             title VARCHAR(160) NOT NULL,
             artist VARCHAR(160) NOT NULL DEFAULT '',
+            author VARCHAR(160) NOT NULL DEFAULT '',
+            has_sequence BOOLEAN NOT NULL DEFAULT FALSE,
             lyrics TEXT NOT NULL DEFAULT '',
             chords_url TEXT,
             sheet_url TEXT,
-            created_by BIGINT NOT NULL REFERENCES users(id),
+            created_by BIGINT REFERENCES users(id),
+            catalog_key VARCHAR(64),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await pool.query(`
+        ALTER TABLE songs
+        ADD COLUMN IF NOT EXISTS author VARCHAR(160) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS has_sequence BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS catalog_key VARCHAR(64)
+    `);
+    await pool.query(`
+        ALTER TABLE songs
+        ALTER COLUMN created_by DROP NOT NULL
+    `);
+    await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS songs_catalog_key_unique
+        ON songs (catalog_key)
+    `);
+    const songCatalog = seedSongs.map((song) => ({
+        title: song.title,
+        author: song.author,
+        hasSequence: song.hasSequence,
+        catalog_key: createHash('sha256')
+            .update(`${song.title.normalize('NFKC').trim().toLocaleLowerCase('es-MX')}\u0000${song.author.normalize('NFKC').trim().toLocaleLowerCase('es-MX')}`)
+            .digest('hex')
+    }));
+    await pool.query(
+        `INSERT INTO songs (title, author, artist, has_sequence, catalog_key)
+         SELECT title, author, author, "hasSequence", catalog_key
+         FROM json_to_recordset($1::json)
+             AS catalog(title TEXT, author TEXT, "hasSequence" BOOLEAN, catalog_key TEXT)
+         ON CONFLICT (catalog_key) DO NOTHING`,
+        [JSON.stringify(songCatalog)]
+    );
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS service_songs (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            event_id BIGINT NOT NULL REFERENCES service_events(id) ON DELETE CASCADE,
+            song_id BIGINT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+            UNIQUE (event_id, song_id)
         )
     `);
     await pool.query(`
@@ -1348,8 +1771,24 @@ async function startServer() {
             title VARCHAR(160) NOT NULL,
             category VARCHAR(20) NOT NULL,
             url TEXT NOT NULL,
+            drive_file_id VARCHAR(100),
             description VARCHAR(500) NOT NULL DEFAULT '',
             created_by BIGINT NOT NULL REFERENCES users(id),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await pool.query(`
+        ALTER TABLE media_resources
+        ADD COLUMN IF NOT EXISTS drive_file_id VARCHAR(100)
+    `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS sound_files (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            title VARCHAR(160) NOT NULL,
+            drive_file_id VARCHAR(100) NOT NULL,
+            url TEXT NOT NULL,
+            mime_type VARCHAR(150) NOT NULL,
+            uploaded_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);

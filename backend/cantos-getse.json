@@ -1,0 +1,772 @@
+[
+  {
+    "title": "Que se llene tu casa",
+    "author": "Ingrid Rosario",
+    "hasSequence": true
+  },
+  {
+    "title": "a cada instante",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "a el sea la gloria",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "a ti el alfa y el omega",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Abba Padre",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Abre mis ojos",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "abre mis ojos oh Cristo",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "Abrenos los cielos",
+    "author": "Christine D Clario",
+    "hasSequence": false
+  },
+  {
+    "title": "Agnus Dei",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Al estar aquí",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Al mundo paz",
+    "author": "",
+    "hasSequence": true
+  },
+  {
+    "title": "Al que es digno de recibir",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "al que esta sentado",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Al que está sentado",
+    "author": "Marcos Brunet",
+    "hasSequence": false
+  },
+  {
+    "title": "al que me ciñe de poder",
+    "author": "Jesús Adrian Romero",
+    "hasSequence": false
+  },
+  {
+    "title": "Alabad a Dios en su santuario",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Alabad a Dios naciones todas",
+    "author": "Emanuel Frias",
+    "hasSequence": false
+  },
+  {
+    "title": "Alabare",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Algo esta cayendo aquí",
+    "author": "José Luis Reyes",
+    "hasSequence": false
+  },
+  {
+    "title": "allá en el cielo",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Amamos tu presencia",
+    "author": "Miel San Marcos",
+    "hasSequence": false
+  },
+  {
+    "title": "anhelo conocerte",
+    "author": "Luigi Castro",
+    "hasSequence": false
+  },
+  {
+    "title": "Aquel que nos amo",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "aquella cruz",
+    "author": "hillsong",
+    "hasSequence": true
+  },
+  {
+    "title": "aquí esta mi vida",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "aquí estas (way maker)",
+    "author": "Priscila Bueno",
+    "hasSequence": true
+  },
+  {
+    "title": "aqui estoy con mis manos alzadas",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Bienvenido Esíritu Santo",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Bueno es alabar",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "Cadena de coritos (A su nombre)",
+    "author": "Davo Toscano XD",
+    "hasSequence": true
+  },
+  {
+    "title": "Cadena de coritos (Himno 1…)",
+    "author": "Davo Toscano XD",
+    "hasSequence": true
+  },
+  {
+    "title": "Canta al Señor",
+    "author": "Hillsong",
+    "hasSequence": false
+  },
+  {
+    "title": "canta al Señor",
+    "author": "ingrid rosario",
+    "hasSequence": true
+  },
+  {
+    "title": "Canta al Señor/Hermoso nombre",
+    "author": "Lugar Seguro",
+    "hasSequence": true
+  },
+  {
+    "title": "Cantamos aleluya",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": true
+  },
+  {
+    "title": "Celebrad a Cristo",
+    "author": "Don Moen",
+    "hasSequence": false
+  },
+  {
+    "title": "cerca de ti",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "como dijiste",
+    "author": "christine D'clario",
+    "hasSequence": false
+  },
+  {
+    "title": "Como en el cielo",
+    "author": "Elevation Worship",
+    "hasSequence": true
+  },
+  {
+    "title": "como es posible yo vivir sin mi Jesús",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Como no voy a creer",
+    "author": "Bethel",
+    "hasSequence": true
+  },
+  {
+    "title": "con mi vida Señor te adoraré",
+    "author": "Jhonny Ramirez",
+    "hasSequence": true
+  },
+  {
+    "title": "Con mis manos levantadas",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "Con todo el gozo",
+    "author": "Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "Con tu sangre",
+    "author": "Vino Nuevo",
+    "hasSequence": false
+  },
+  {
+    "title": "consume con tu fuego",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Cordero y León",
+    "author": "Bethel",
+    "hasSequence": true
+  },
+  {
+    "title": "Cristo tu triunfo celebramos",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Cristo yo te amo",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Cuan grande es Dios",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": false
+  },
+  {
+    "title": "Cuan grande es El",
+    "author": "Desconocido",
+    "hasSequence": false
+  },
+  {
+    "title": "Cuando allá se pase lista",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "De gloria en gloria",
+    "author": "Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "deja que el Espíritu domine tu vida",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "derramo el perfume",
+    "author": "",
+    "hasSequence": true
+  },
+  {
+    "title": "Deseo eterno",
+    "author": "Ivonne Muñoz",
+    "hasSequence": true
+  },
+  {
+    "title": "despues de la batalla",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Digno",
+    "author": "Marcos Brunet",
+    "hasSequence": false
+  },
+  {
+    "title": "Digno es el Señor",
+    "author": "Marcela Gandara",
+    "hasSequence": false
+  },
+  {
+    "title": "Dios de lo imposible",
+    "author": "Marco Barrientos",
+    "hasSequence": true
+  },
+  {
+    "title": "Dios de pactos",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Dios está aquí",
+    "author": "Lucía Parker",
+    "hasSequence": true
+  },
+  {
+    "title": "Dios ha sido bueno",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Dios imcomparable",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Dios imparable",
+    "author": "Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "Dios manda lluvia",
+    "author": "Rojo",
+    "hasSequence": false
+  },
+  {
+    "title": "Dios no rechaza oración",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Donde esta el Espíritu de Dios",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "Dulce refugio",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "El centro de todo",
+    "author": "Hillsong",
+    "hasSequence": false
+  },
+  {
+    "title": "el culto de hoy será maravilloso",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "El Dios que adoramos",
+    "author": "La IBI",
+    "hasSequence": true
+  },
+  {
+    "title": "El es el rey",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "El es vida",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": true
+  },
+  {
+    "title": "El espiritu de Dios esta en este lugar",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "El gran yo soy",
+    "author": "",
+    "hasSequence": true
+  },
+  {
+    "title": "El nombre",
+    "author": "Un corazón",
+    "hasSequence": true
+  },
+  {
+    "title": "El nombre/No hay otro nombre",
+    "author": "Davo Toscano XD",
+    "hasSequence": true
+  },
+  {
+    "title": "El poder de Dios se siente aquí",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "El poder de tu amor",
+    "author": "Ingrid Rosario",
+    "hasSequence": false
+  },
+  {
+    "title": "El señor es mi pastor",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "En aquella cruz",
+    "author": "Hillsong",
+    "hasSequence": true
+  },
+  {
+    "title": "En el nombre de Jesú",
+    "author": "Ingrid Rosario",
+    "hasSequence": true
+  },
+  {
+    "title": "En esta reunion Cristo esta",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "En la casa de Dios",
+    "author": "Danilo Montero",
+    "hasSequence": false
+  },
+  {
+    "title": "En la cruz",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "En la viña del Señor",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "En ti",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "En totalidad a ti",
+    "author": "Vino Nuevo",
+    "hasSequence": false
+  },
+  {
+    "title": "En tu luz",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "En tu presencia",
+    "author": "",
+    "hasSequence": true
+  },
+  {
+    "title": "Encuentrame otra vez",
+    "author": "Elevation Worship",
+    "hasSequence": true
+  },
+  {
+    "title": "Es tu amor",
+    "author": "Hillsong",
+    "hasSequence": true
+  },
+  {
+    "title": "Espíritu Santo revelame a Cristo",
+    "author": "Daniel Calveti",
+    "hasSequence": false
+  },
+  {
+    "title": "Espíritu y verdad",
+    "author": "Marco Barrientos",
+    "hasSequence": true
+  },
+  {
+    "title": "Estár contigo",
+    "author": "Job Gonzalez",
+    "hasSequence": true
+  },
+  {
+    "title": "Estás aquí",
+    "author": "Benjamin Rivera & Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Este es mi deseo",
+    "author": "Claudio Freidzon",
+    "hasSequence": false
+  },
+  {
+    "title": "Exaltate",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Glorificate",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Glorioso",
+    "author": "BJ Putnam",
+    "hasSequence": true
+  },
+  {
+    "title": "Gracia sublime",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": true
+  },
+  {
+    "title": "Grande",
+    "author": "Living & Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "Grande y fuerte",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Hay una unción",
+    "author": "Varios",
+    "hasSequence": false
+  },
+  {
+    "title": "Hermoso eres",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Hermoso Momento",
+    "author": "Kairo Worship",
+    "hasSequence": true
+  },
+  {
+    "title": "Hermoso Nombre",
+    "author": "Hillsong",
+    "hasSequence": true
+  },
+  {
+    "title": "Hosanna",
+    "author": "Marco Barrientos",
+    "hasSequence": true
+  },
+  {
+    "title": "Jubilo",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "junto a la cruz",
+    "author": "",
+    "hasSequence": false
+  },
+  {
+    "title": "La bondad de Dios",
+    "author": "Essential Worship",
+    "hasSequence": true
+  },
+  {
+    "title": "Lo único que quiero",
+    "author": "Marco Barrientos",
+    "hasSequence": true
+  },
+  {
+    "title": "Medley Conmemorativo",
+    "author": "Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "Medley Deseo eterno",
+    "author": "CTUE",
+    "hasSequence": true
+  },
+  {
+    "title": "Medley Hay poder",
+    "author": "Davo Toscano XD",
+    "hasSequence": true
+  },
+  {
+    "title": "Mi fortaleza",
+    "author": "Hillsong",
+    "hasSequence": false
+  },
+  {
+    "title": "No hay lugar más alto",
+    "author": "Miel San Marcos",
+    "hasSequence": false
+  },
+  {
+    "title": "Perfume a tus pies",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": false
+  },
+  {
+    "title": "Poderos Dios",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Por siempre te alabaré",
+    "author": "Planetshakers",
+    "hasSequence": true
+  },
+  {
+    "title": "Porque bueno es Dios",
+    "author": "Jaime Murrel",
+    "hasSequence": false
+  },
+  {
+    "title": "Porque grande es Jehova",
+    "author": "Jaime Murrel",
+    "hasSequence": false
+  },
+  {
+    "title": "Porque un niño nos he nacido",
+    "author": "Paul Baloche",
+    "hasSequence": true
+  },
+  {
+    "title": "Portador de tu gloria",
+    "author": "Alejandro del Bosque",
+    "hasSequence": true
+  },
+  {
+    "title": "Que se abra el cielo",
+    "author": "Marcos Brunet",
+    "hasSequence": true
+  },
+  {
+    "title": "que toda la creación alabe a Dios",
+    "author": "",
+    "hasSequence": true
+  },
+  {
+    "title": "Queremos a Cristo proclamar",
+    "author": "Desconocido",
+    "hasSequence": false
+  },
+  {
+    "title": "Queremos darte gloria",
+    "author": "Desconocido",
+    "hasSequence": false
+  },
+  {
+    "title": "Quiero levantar mis manos",
+    "author": "Marcos Witt",
+    "hasSequence": false
+  },
+  {
+    "title": "Recibe toda la gloria",
+    "author": "Julio Melgar",
+    "hasSequence": false
+  },
+  {
+    "title": "Revelación",
+    "author": "Danilo Montero",
+    "hasSequence": true
+  },
+  {
+    "title": "Rey de gloria",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Rey de reyes",
+    "author": "Marco Barrientos",
+    "hasSequence": true
+  },
+  {
+    "title": "Santo por siempre",
+    "author": "La IBI",
+    "hasSequence": true
+  },
+  {
+    "title": "Señor yo quiero construir",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Sobre la cruz",
+    "author": "Alejandro del Bosque",
+    "hasSequence": true
+  },
+  {
+    "title": "Socorro",
+    "author": "Un corazón",
+    "hasSequence": true
+  },
+  {
+    "title": "Su poder",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Te adoraré",
+    "author": "Johnny Ramiréz",
+    "hasSequence": true
+  },
+  {
+    "title": "Te doy gloria",
+    "author": "En Espíritu y en Verdad",
+    "hasSequence": false
+  },
+  {
+    "title": "Toda la gloria",
+    "author": "Esperanza de vida",
+    "hasSequence": true
+  },
+  {
+    "title": "Todopoderoso",
+    "author": "Lakewoood",
+    "hasSequence": true
+  },
+  {
+    "title": "Tu eres digno de gloria",
+    "author": "Gerry Marquez",
+    "hasSequence": true
+  },
+  {
+    "title": "Tu nombre",
+    "author": "Miel San Marcos",
+    "hasSequence": true
+  },
+  {
+    "title": "Tu nombre oh Dios",
+    "author": "Marcos Witt",
+    "hasSequence": true
+  },
+  {
+    "title": "Tu proveerás",
+    "author": "Majo y Dan",
+    "hasSequence": true
+  },
+  {
+    "title": "Ven es hora de adorarle",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Ven Espíritu Santo ven",
+    "author": "Barak",
+    "hasSequence": true
+  },
+  {
+    "title": "Ven Espíritu ven",
+    "author": "Marco Barrientos",
+    "hasSequence": false
+  },
+  {
+    "title": "Vengan",
+    "author": "Job Gonzalez",
+    "hasSequence": true
+  },
+  {
+    "title": "Vine adorarte",
+    "author": "Vino Nuevo",
+    "hasSequence": false
+  },
+  {
+    "title": "Yahweh se manisfestará",
+    "author": "Oasis Ministry",
+    "hasSequence": true
+  },
+  {
+    "title": "Yo quiero más de ti",
+    "author": "Jaime Murrel",
+    "hasSequence": false
+  }
+]

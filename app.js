@@ -7,7 +7,7 @@
             const headers = new Headers(options.headers || {});
             const token = localStorage.getItem(tokenKey);
 
-            if (options.body) {
+            if (options.body && !(options.body instanceof FormData)) {
                 headers.set('Content-Type', 'application/json');
             }
             if (token) {
