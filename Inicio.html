@@ -264,6 +264,40 @@
             cursor:pointer;
         }
         .save-role:disabled { opacity:.55; cursor:not-allowed; }
+        .management-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+        .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .password-form { margin-top:16px; }
+        .form-field { display:grid; gap:5px; color:var(--muted); font-size:13px; }
+        .form-field input, .form-field select, .form-field textarea {
+            width:100%; min-height:40px; padding:9px 11px; border:1px solid #d8deea;
+            border-radius:9px; background:#fff; color:var(--ink); font:inherit;
+        }
+        .form-field textarea { min-height:76px; resize:vertical; }
+        .form-field.full { grid-column:1 / -1; }
+        .action-button {
+            min-height:40px; padding:0 14px; border:0; border-radius:9px;
+            background:var(--blue); color:#fff; font:inherit; font-weight:700; cursor:pointer;
+        }
+        .action-button:disabled { opacity:.55; cursor:wait; }
+        .service-list, .directory-list, .audit-list { display:grid; gap:10px; }
+        .service-card, .directory-row, .audit-row {
+            padding:14px; border:1px solid var(--line); border-radius:12px; background:#fff;
+        }
+        .service-card h3 { margin:0 0 5px; color:var(--navy); font-size:18px; }
+        .service-date, .service-details, .audit-details { color:var(--muted); font-size:13px; }
+        .assignment-list { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+        .assignment-chip {
+            display:inline-flex; align-items:center; gap:7px; padding:6px 9px;
+            border-radius:999px; background:#edf3ff; color:var(--navy); font-size:12px;
+        }
+        .remove-assignment {
+            padding:0; border:0; background:none; color:#9b2631; font:inherit; font-weight:700; cursor:pointer;
+        }
+        .role-access { margin-top:20px; }
+        .role-access h2 { margin-top:0; }
+        .role-access ul { margin:10px 0 0; padding-left:20px; color:var(--muted); line-height:1.7; }
+        .empty-state { color:var(--muted); font-size:14px; }
+        .status { overflow-wrap:anywhere; }
         [hidden] { display:none !important; }
 
         @media (max-width: 650px) {
@@ -277,6 +311,8 @@
             .announcement { padding:19px; }
             .announcement-icon { width:48px; height:48px; font-size:24px; }
             .content-grid { grid-template-columns:1fr; }
+            .management-grid, .form-grid { grid-template-columns:1fr; }
+            .form-field.full { grid-column:auto; }
             .user-row { grid-template-columns:minmax(0, 1fr); }
             .role-options { grid-column:1 / -1; }
             .save-role { grid-column:1; grid-row:auto; justify-self:end; }
@@ -317,17 +353,131 @@
             <span class="announcement-icon" aria-hidden="true">✧</span>
         </section>
 
-        <section class="content-grid">
+        <section class="content-grid" id="communityPanel">
             <article class="panel">
                 <p class="date">Comunidad</p>
-                <h2>Próximos encuentros</h2>
-                <p>Consulta con tu equipo de coordinación para conocer los horarios y detalles de las próximas reuniones.</p>
+                <h2>Muro de avisos y calendario</h2>
+                <p>Consulta anuncios generales, horarios de servicios y actividades de la comunidad.</p>
             </article>
             <article class="panel">
                 <p class="date">Oración</p>
-                <h2>Cuenta con nosotros</h2>
-                <p>La comunidad está aquí para acompañarte. Comparte tus peticiones con las personas responsables de tu congregación.</p>
+                <h2>Peticiones de oración</h2>
+                <p>Este espacio corresponde a las peticiones y acompañamiento de la congregación.</p>
             </article>
+        </section>
+
+        <section class="panel role-access" id="profilePanel">
+            <h2>Mi perfil</h2>
+            <p>Actualiza tus datos y cambia tu contraseña. Nadie más puede modificar tu perfil desde aquí.</p>
+            <form id="profileForm" class="form-grid">
+                <label class="form-field">Nombre
+                    <input name="nombre" maxlength="150" required>
+                </label>
+                <label class="form-field">Teléfono
+                    <input name="telefono" type="tel" maxlength="30" required>
+                </label>
+                <label class="form-field full">Correo
+                    <input name="email" type="email" maxlength="255" required>
+                </label>
+                <button class="action-button" type="submit">Guardar mis datos</button>
+            </form>
+            <form id="passwordForm" class="form-grid password-form">
+                <label class="form-field">Contraseña actual
+                    <input name="currentPassword" type="password" autocomplete="current-password" required>
+                </label>
+                <label class="form-field">Nueva contraseña
+                    <input name="newPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
+                </label>
+                <button class="action-button" type="submit">Cambiar contraseña</button>
+            </form>
+            <p class="status" id="profileStatus" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel role-access" id="coordinatorPanel" hidden>
+            <h2>Coordinación</h2>
+            <p>Gestiona cultos y eventos, programa los equipos, administra anuncios y peticiones, y consulta el directorio básico. La administración de roles permanece exclusiva de Master.</p>
+            <h3>Directorio de miembros</h3>
+            <div class="directory-list" id="directoryList"></div>
+        </section>
+
+        <section class="panel role-access" id="musicianPanel" hidden>
+            <h2>Repertorio y ensayos</h2>
+            <ul>
+                <li>Consulta repertorio, letras, acordes y partituras.</li>
+                <li>Revisa ensayos y programación de servicios.</li>
+                <li>Confirma asistencia a los cultos donde tienes asignación.</li>
+            </ul>
+        </section>
+
+        <section class="panel role-access" id="multimediaPanel" hidden>
+            <h2>Multimedia</h2>
+            <ul>
+                <li>Consulta anuncios para proyección y el programa del culto.</li>
+                <li>Accede al espacio de recursos visuales oficiales.</li>
+            </ul>
+        </section>
+
+        <section class="panel role-access" id="soundPanel" hidden>
+            <h2>Sonido</h2>
+            <ul>
+                <li>Consulta la configuración de monitores por músico y las notas técnicas.</li>
+                <li>Revisa las asignaciones de sonido local y transmisión.</li>
+            </ul>
+        </section>
+
+        <section class="panel role-access" id="servicesPanel">
+            <h2>Cultos, ensayos y eventos</h2>
+            <p>Consulta fechas y equipos programados. Las asignaciones de Dirección pueden combinarse con cualquier otro puesto.</p>
+            <p class="status" id="servicesStatus" role="status" aria-live="polite"></p>
+            <div class="management-grid" id="serviceManagement" hidden>
+                <form class="panel" id="serviceForm">
+                    <h3>Programar un culto o evento</h3>
+                    <div class="form-grid">
+                        <input name="serviceId" type="hidden">
+                        <label class="form-field full">Nombre
+                            <input name="title" maxlength="120" required>
+                        </label>
+                        <label class="form-field">Tipo
+                            <select name="eventType" required>
+                                <option>Culto</option>
+                                <option>Ensayo</option>
+                                <option>Evento especial</option>
+                            </select>
+                        </label>
+                        <label class="form-field">Fecha y hora
+                            <input name="startsAt" type="datetime-local" required>
+                        </label>
+                        <label class="form-field full">Detalles
+                            <textarea name="details" maxlength="2000"></textarea>
+                        </label>
+                        <button class="action-button" type="submit">Guardar evento</button>
+                        <button class="action-button" id="cancelServiceEdit" type="button" hidden>Cancelar edición</button>
+                    </div>
+                </form>
+                <form class="panel" id="assignmentForm">
+                    <h3>Asignar equipo</h3>
+                    <div class="form-grid">
+                        <label class="form-field full">Culto o evento
+                            <select name="serviceId" required></select>
+                        </label>
+                        <label class="form-field">Puesto
+                            <select name="position" required></select>
+                        </label>
+                        <label class="form-field">Persona
+                            <select name="userId" required></select>
+                        </label>
+                        <button class="action-button" type="submit">Asignar puesto</button>
+                    </div>
+                </form>
+            </div>
+            <div class="service-list" id="serviceList"></div>
+        </section>
+
+        <section class="panel role-access" id="masterPanel" hidden>
+            <h2>Administración general</h2>
+            <p>Master puede administrar roles, consultar auditorías y verificar el estado técnico sin exponer credenciales ni secretos de conexión.</p>
+            <h3>Registro de auditoría</h3>
+            <div class="audit-list" id="auditList"></div>
         </section>
 
         <section class="panel admin-panel" id="adminPanel" hidden>
@@ -354,8 +504,33 @@
             6: 'Miembro'
         };
         const roleOptions = [1, 2, 3, 4, 6];
+        const positionRoles = {
+            'Batería': [1],
+            'Corista': [1],
+            'Bajo': [1],
+            'Guitarra acústica': [1],
+            'Guitarra eléctrica': [1],
+            'Multimedia - transmisión': [3],
+            'Multimedia - letras': [3],
+            'Sonido - local': [4],
+            'Sonido - transmisión': [4],
+            'Cámara 2 - abajo': [3],
+            'Dirección': [1, 2, 3, 4, 5, 6]
+        };
         const userList = document.getElementById('userList');
         const adminStatus = document.getElementById('adminStatus');
+        const servicesStatus = document.getElementById('servicesStatus');
+        let currentServices = [];
+        let directoryUsers = [];
+        let canManageServices = false;
+        let currentUserId = '';
+        const positionSelect = document.querySelector('#assignmentForm [name="position"]');
+        Object.keys(positionRoles).forEach((position) => {
+            const option = document.createElement('option');
+            option.value = position;
+            option.textContent = position;
+            positionSelect.appendChild(option);
+        });
 
         function addTextElement(parent, tag, className, text) {
             const element = document.createElement(tag);
@@ -427,27 +602,340 @@
             });
         }
 
-        async function loadPage() {
+        function formatServiceDate(value) {
+            return new Intl.DateTimeFormat('es-MX', {
+                dateStyle: 'full',
+                timeStyle: 'short'
+            }).format(new Date(value));
+        }
+
+        function getUserAreas(user) {
+            return Array.isArray(user.areas) ? user.areas.map(Number) : [Number(user.area)];
+        }
+
+        function refreshAssignmentOptions() {
+            const userSelect = document.querySelector('#assignmentForm [name="userId"]');
+            const position = positionSelect.value;
+            const neededRoles = positionRoles[position] || [];
+            const options = directoryUsers.filter((user) =>
+                neededRoles.some((area) => getUserAreas(user).includes(area))
+            );
+            userSelect.replaceChildren();
+            options.forEach((user) => {
+                const option = document.createElement('option');
+                option.value = String(user.id);
+                option.textContent = user.nombre;
+                userSelect.appendChild(option);
+            });
+            if (!options.length) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay personas con ese rol';
+                userSelect.appendChild(option);
+            }
+        }
+
+        function renderServices() {
+            const serviceList = document.getElementById('serviceList');
+            const serviceSelect = document.querySelector('#assignmentForm [name="serviceId"]');
+            serviceList.replaceChildren();
+            serviceSelect?.replaceChildren();
+
+            currentServices.forEach((service) => {
+                if (serviceSelect) {
+                    const option = document.createElement('option');
+                    option.value = String(service.id);
+                    option.textContent = `${service.title} · ${formatServiceDate(service.starts_at)}`;
+                    serviceSelect.appendChild(option);
+                }
+
+                const card = document.createElement('article');
+                card.className = 'service-card';
+                addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
+                addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
+                if (service.details) addTextElement(card, 'p', 'service-details', service.details);
+                if (canManageServices) {
+                    const actions = document.createElement('div');
+                    actions.className = 'assignment-list';
+                    const editButton = document.createElement('button');
+                    editButton.className = 'action-button';
+                    editButton.type = 'button';
+                    editButton.textContent = 'Editar evento';
+                    editButton.addEventListener('click', () => {
+                        const form = document.getElementById('serviceForm');
+                        form.elements.serviceId.value = String(service.id);
+                        form.elements.title.value = service.title;
+                        form.elements.eventType.value = service.event_type;
+                        const date = new Date(service.starts_at);
+                        date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                        form.elements.startsAt.value = date.toISOString().slice(0, 16);
+                        form.elements.details.value = service.details || '';
+                        form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
+                        document.getElementById('cancelServiceEdit').hidden = false;
+                        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                    actions.appendChild(editButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'remove-assignment';
+                    deleteButton.type = 'button';
+                    deleteButton.textContent = 'Eliminar evento';
+                    deleteButton.addEventListener('click', async () => {
+                        if (!window.confirm(`¿Eliminar "${service.title}" y sus asignaciones?`)) return;
+                        try {
+                            await MiIglesia.request(`/api/services/${encodeURIComponent(service.id)}`, { method: 'DELETE' });
+                            await loadServices();
+                            servicesStatus.textContent = 'Se eliminó el evento y sus asignaciones.';
+                        } catch (error) {
+                            servicesStatus.textContent = error.message;
+                        }
+                    });
+                    actions.appendChild(deleteButton);
+                    card.appendChild(actions);
+                }
+                const assignments = document.createElement('div');
+                assignments.className = 'assignment-list';
+                service.assignments.forEach((assignment) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'assignment-chip';
+                    chip.appendChild(document.createTextNode(`${assignment.position}: ${assignment.name}`));
+                    if (canManageServices) {
+                        const remove = document.createElement('button');
+                        remove.className = 'remove-assignment';
+                        remove.type = 'button';
+                        remove.textContent = 'Quitar';
+                        remove.setAttribute('aria-label', `Quitar ${assignment.position} de ${assignment.name}`);
+                        remove.addEventListener('click', async () => {
+                            try {
+                                await MiIglesia.request(
+                                    `/api/services/${encodeURIComponent(service.id)}/assignments/${encodeURIComponent(assignment.id)}`,
+                                    { method: 'DELETE' }
+                                );
+                                await loadServices();
+                                servicesStatus.textContent = 'Se quitó la asignación.';
+                            } catch (error) {
+                                servicesStatus.textContent = error.message;
+                            }
+                        });
+                        chip.appendChild(remove);
+                    }
+                    assignments.appendChild(chip);
+                });
+                if (!service.assignments.length) {
+                    addTextElement(assignments, 'span', 'empty-state', 'Equipo por asignar');
+                }
+                card.appendChild(assignments);
+                serviceList.appendChild(card);
+            });
+
+            if (!currentServices.length) {
+                addTextElement(serviceList, 'p', 'empty-state', 'Aún no hay cultos o eventos programados.');
+            }
+            refreshAssignmentOptions();
+        }
+
+        async function loadServices() {
+            const { services } = await MiIglesia.request('/api/services');
+            currentServices = services;
+            renderServices();
+        }
+
+        async function loadDirectory() {
+            const { users } = await MiIglesia.request('/api/team/directory');
+            directoryUsers = users;
+            const directoryList = document.getElementById('directoryList');
+            directoryList.replaceChildren();
+            users.forEach((user) => {
+                const row = document.createElement('div');
+                row.className = 'directory-row';
+                addTextElement(row, 'div', 'user-name', user.nombre);
+                addTextElement(row, 'div', 'user-meta', `${user.telefono} · ${user.email}`);
+                directoryList.appendChild(row);
+            });
+            refreshAssignmentOptions();
+        }
+
+        async function loadAuditLogs() {
+            const { logs } = await MiIglesia.request('/api/admin/audit-logs');
+            const auditList = document.getElementById('auditList');
+            auditList.replaceChildren();
+            logs.forEach((log) => {
+                const row = document.createElement('div');
+                row.className = 'audit-row';
+                addTextElement(row, 'div', 'user-name', `${log.action} · ${log.actor_name || 'Cuenta eliminada'}`);
+                addTextElement(row, 'div', 'audit-details', `${formatServiceDate(log.created_at)} · ${log.target_type} ${log.target_id || ''}`);
+                auditList.appendChild(row);
+            });
+            if (!logs.length) addTextElement(auditList, 'p', 'empty-state', 'Aún no hay acciones registradas.');
+        }
+
+        document.getElementById('serviceForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            const serviceId = String(data.get('serviceId') || '');
+            button.disabled = true;
+            servicesStatus.textContent = '';
             try {
-                const { user } = await MiIglesia.request('/api/auth/me');
+            await MiIglesia.request(
+                serviceId ? `/api/services/${encodeURIComponent(serviceId)}` : '/api/services',
+                {
+                method: serviceId ? 'PATCH' : 'POST',
+                body: JSON.stringify({
+                    title: String(data.get('title')).trim(),
+                    eventType: data.get('eventType'),
+                        startsAt: new Date(data.get('startsAt')).toISOString(),
+                        details: String(data.get('details') || '').trim()
+                    })
+                    }
+                );
+                form.reset();
+                button.textContent = 'Guardar evento';
+                document.getElementById('cancelServiceEdit').hidden = true;
+                servicesStatus.textContent = serviceId ? 'Evento actualizado.' : 'Culto o evento programado.';
+                await loadServices();
+            } catch (error) {
+                servicesStatus.textContent = error.message || 'No se pudo guardar el evento.';
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('assignmentForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            servicesStatus.textContent = '';
+            try {
+                await MiIglesia.request(`/api/services/${encodeURIComponent(data.get('serviceId'))}/assignments`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        userId: data.get('userId'),
+                        position: data.get('position')
+                    })
+                });
+                servicesStatus.textContent = 'Puesto asignado al culto.';
+                await loadServices();
+            } catch (error) {
+                servicesStatus.textContent = error.message || 'No se pudo asignar el puesto.';
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.querySelector('#assignmentForm [name="position"]').addEventListener('change', refreshAssignmentOptions);
+
+        document.getElementById('cancelServiceEdit').addEventListener('click', () => {
+            const form = document.getElementById('serviceForm');
+            form.reset();
+            form.querySelector('button[type="submit"]').textContent = 'Guardar evento';
+            document.getElementById('cancelServiceEdit').hidden = true;
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            const data = new FormData(form);
+            button.disabled = true;
+            try {
+                const { user } = await MiIglesia.request('/api/profile', {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        nombre: String(data.get('nombre')).trim(),
+                        telefono: String(data.get('telefono')).trim(),
+                        email: String(data.get('email')).trim()
+                    })
+                });
                 document.getElementById('welcomeName').textContent = user.nombre;
                 document.getElementById('userName').textContent = user.nombre;
-                const areas = Array.isArray(user.areas) ? user.areas.map(Number) : [Number(user.area)];
-                document.getElementById('roleBadge').textContent =
-                    areas.map((area) => roleLabels[area]).filter(Boolean).join(' · ') || 'Miembro';
-                document.getElementById('categoryLabel').textContent =
-                    user.category === 'worship' ? 'Miembros de alabanza' : 'Congregación';
+                document.getElementById('profileStatus').textContent = 'Datos del perfil actualizados.';
+            } catch (error) {
+                document.getElementById('profileStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
 
+        document.getElementById('passwordForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            const data = new FormData(form);
+            button.disabled = true;
+            try {
+                const result = await MiIglesia.request('/api/profile/password', {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        currentPassword: data.get('currentPassword'),
+                        newPassword: data.get('newPassword')
+                    })
+                });
+                form.reset();
+                document.getElementById('profileStatus').textContent = result.message;
+            } catch (error) {
+                document.getElementById('profileStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        async function loadPage() {
+            let user;
+            try {
+                ({ user } = await MiIglesia.request('/api/auth/me'));
+            } catch (error) {
+                if (error.status === 401) {
+                    MiIglesia.clearToken();
+                    window.location.replace('index.html');
+                    return;
+                }
+                document.getElementById('servicesStatus').textContent =
+                    'No se pudo validar la sesión con el servidor. Intenta recargar la página.';
+                return;
+            }
+
+            document.getElementById('welcomeName').textContent = user.nombre;
+            document.getElementById('userName').textContent = user.nombre;
+            const areas = getUserAreas(user);
+            currentUserId = String(user.id);
+            const isMaster = areas.includes(5);
+            const isCoordinator = areas.includes(2);
+            canManageServices = isMaster || isCoordinator;
+            document.getElementById('roleBadge').textContent =
+                areas.map((area) => roleLabels[area]).filter(Boolean).join(' · ') || 'Miembro';
+            document.getElementById('categoryLabel').textContent =
+                user.category === 'worship' ? 'Miembros de alabanza' : 'Congregación';
+            const profileForm = document.getElementById('profileForm');
+            profileForm.elements.nombre.value = user.nombre;
+            profileForm.elements.telefono.value = user.telefono || '';
+            profileForm.elements.email.value = user.email || '';
+
+            for (const [area, panelId] of [
+                [2, 'coordinatorPanel'],
+                [1, 'musicianPanel'],
+                [3, 'multimediaPanel'],
+                [4, 'soundPanel']
+            ]) {
+                document.getElementById(panelId).hidden = !isMaster && !areas.includes(area);
+            }
+            document.getElementById('serviceManagement').hidden = !canManageServices;
+            document.getElementById('adminPanel').hidden = !isMaster;
+            document.getElementById('masterPanel').hidden = !isMaster;
+
+            try {
                 const dashboard = await MiIglesia.request('/api/dashboard');
                 document.getElementById('memberCount').textContent = dashboard.memberCount;
-
-                if (areas.includes(5)) {
-                    document.getElementById('adminPanel').hidden = false;
-                    await loadUsers(user.id);
+                await loadServices();
+                if (canManageServices) await loadDirectory();
+                if (isMaster) {
+                    await Promise.all([loadUsers(user.id), loadAuditLogs()]);
                 }
             } catch (error) {
-                MiIglesia.clearToken();
-                window.location.replace('index.html');
+                servicesStatus.textContent = error.message || 'No se pudo cargar el contenido.';
             }
         }
 

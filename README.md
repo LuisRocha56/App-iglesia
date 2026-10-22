@@ -17,7 +17,11 @@ El frontend es estático y se publica en Vercel. La API Express corre en Render 
 
 5. Sirve la raíz del proyecto con Live Server. Para desarrollo local, cambia temporalmente la URL de API de `api-config.js` a `http://localhost:3000`.
 
-El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan sus roles actuales y reciben la categoría Congregación por defecto. Los roles se migran a una lista para permitir asignar varios a cada persona.
+El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan sus roles actuales y reciben la categoría Congregación por defecto. Los roles se migran a una lista para permitir asignar varios a cada persona. Miembro es el rol base; las personas con roles adicionales también ven los apartados de sus equipos.
+
+Master y Coordinador pueden programar, editar y eliminar cultos, ensayos y eventos, además de armar sus equipos. Los puestos de música, multimedia y sonido solo se asignan a cuentas con el rol correspondiente; cada persona puede tener un puesto operativo por culto. Dirección puede añadirse además de ese puesto. El resto de usuarios puede consultar el programa. Coordinador y Master pueden consultar el directorio básico; solo Master puede asignar roles y leer la auditoría.
+
+Cada persona puede actualizar sus propios datos y cambiar su contraseña confirmando la contraseña actual. La API no entrega contraseñas ni secretos técnicos.
 
 Al abrir `index.html`, si el navegador conserva un token de sesión válido, la página lo comprueba con el API y abre `Inicio.html` automáticamente. Si el token venció, se elimina y se solicita iniciar sesión otra vez. Si el API no responde, el token se conserva. Las sesiones actuales duran 8 horas; borrar los datos del navegador también cierra la sesión.
 
