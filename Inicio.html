@@ -1036,19 +1036,19 @@
             6: 'Miembro'
         };
         const roleOptions = [1, 2, 3, 4, 6];
-        const positionRoles = {
-            'Batería': [1],
-            'Corista': [1],
-            'Bajo': [1],
-            'Guitarra acústica': [1],
-            'Guitarra eléctrica': [1],
-            'Multimedia - transmisión': [3],
-            'Multimedia - letras': [3],
-            'Sonido - local': [4],
-            'Sonido - transmisión': [4],
-            'Cámara 2 - abajo': [3],
-            'Dirección': [1, 2, 3, 4, 5, 6]
-        };
+        const servicePositions = [
+            'Batería',
+            'Corista',
+            'Bajo',
+            'Guitarra acústica',
+            'Guitarra eléctrica',
+            'Multimedia - transmisión',
+            'Multimedia - letras',
+            'Sonido - local',
+            'Sonido - transmisión',
+            'Cámara 2 - abajo',
+            'Dirección'
+        ];
         const userList = document.getElementById('userList');
         const adminStatus = document.getElementById('adminStatus');
         const servicesStatus = document.getElementById('servicesStatus');
@@ -1069,7 +1069,7 @@
         const selectedServiceSongIds = new Set();
         const songsPerPage = 10;
         const positionSelect = document.querySelector('#assignmentForm [name="position"]');
-        Object.keys(positionRoles).forEach((position) => {
+        servicePositions.forEach((position) => {
             const option = document.createElement('option');
             option.value = position;
             option.textContent = position;
@@ -1271,13 +1271,12 @@
         function refreshAssignmentOptions() {
             const userSelect = document.querySelector('#assignmentForm [name="userId"]');
             const position = positionSelect.value;
-            const neededRoles = positionRoles[position] || [];
             const serviceId = document.querySelector('#assignmentForm [name="serviceId"]').value;
             const service = currentServices.find((item) => String(item.id) === serviceId);
             const existingAssignments = service?.assignments || [];
             const pendingAssignments = pendingAssignmentsByService.get(serviceId) || [];
             const options = directoryUsers.filter((user) => {
-                if (!neededRoles.some((area) => getUserAreas(user).includes(area))) return false;
+                if (!getUserAreas(user).some((area) => [1, 2, 3, 4, 5].includes(area))) return false;
                 const userId = String(user.id);
                 const occupiedPositions = [
                     ...existingAssignments.filter((assignment) => String(assignment.userId) === userId)
@@ -1299,7 +1298,7 @@
             if (!options.length) {
                 const option = document.createElement('option');
                 option.value = '';
-                option.textContent = 'No hay personas con ese rol';
+                option.textContent = 'No hay integrantes del equipo disponibles';
                 userSelect.appendChild(option);
             }
         }

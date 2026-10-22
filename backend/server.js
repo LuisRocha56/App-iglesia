@@ -45,19 +45,19 @@ const roleNames = {
     5: 'Master',
     6: 'Miembro'
 };
-const servicePositions = {
-    'Batería': [1],
-    'Corista': [1],
-    'Bajo': [1],
-    'Guitarra acústica': [1],
-    'Guitarra eléctrica': [1],
-    'Multimedia - transmisión': [3],
-    'Multimedia - letras': [3],
-    'Sonido - local': [4],
-    'Sonido - transmisión': [4],
-    'Cámara 2 - abajo': [3],
-    'Dirección': [1, 2, 3, 4, 5, 6]
-};
+const servicePositions = new Set([
+    'Batería',
+    'Corista',
+    'Bajo',
+    'Guitarra acústica',
+    'Guitarra eléctrica',
+    'Multimedia - transmisión',
+    'Multimedia - letras',
+    'Sonido - local',
+    'Sonido - transmisión',
+    'Cámara 2 - abajo',
+    'Dirección'
+]);
 
 function getUserRoles(user) {
     const areas = Array.isArray(user.role_ids) && user.role_ids.length
@@ -797,7 +797,7 @@ app.post('/api/services/:id/assignments', getAuthenticatedUser, requireCoordinat
     const position = req.body?.position;
 
     if (!/^[1-9]\d*$/.test(serviceId) || !/^[1-9]\d*$/.test(userId)
-        || !Object.hasOwn(servicePositions, position)) {
+        || !servicePositions.has(position)) {
         res.status(400).json({ success: false, message: 'Selecciona un culto, una persona y un puesto válidos.' });
         return;
     }
@@ -814,8 +814,8 @@ app.post('/api/services/:id/assignments', getAuthenticatedUser, requireCoordinat
         }
 
         const { areas } = getUserRoles(user);
-        if (!servicePositions[position].some((area) => areas.includes(area))) {
-            res.status(403).json({ success: false, message: 'La persona no tiene el rol requerido para ese puesto.' });
+        if (!areas.some((area) => [1, 2, 3, 4, 5].includes(area))) {
+            res.status(403).json({ success: false, message: 'Solo se pueden asignar integrantes con un rol de equipo.' });
             return;
         }
 
@@ -861,7 +861,7 @@ app.post('/api/services/:serviceId/assignments/batch', getAuthenticatedUser, req
         position: item?.position
     }));
     if (assignments.some(({ userId, position }) =>
-        !/^[1-9]\d*$/.test(userId) || !Object.hasOwn(servicePositions, position))) {
+        !/^[1-9]\d*$/.test(userId) || !servicePositions.has(position))) {
         res.status(400).json({ success: false, message: 'Hay una persona o puesto inválido en la lista.' });
         return;
     }
@@ -921,8 +921,8 @@ app.post('/api/services/:serviceId/assignments/batch', getAuthenticatedUser, req
         for (const assignment of assignments) {
             const user = users.get(assignment.userId);
             const { areas } = getUserRoles(user);
-            if (!servicePositions[assignment.position].some((area) => areas.includes(area))) {
-                const error = new Error(`${user.nombre} no tiene el rol requerido para ${assignment.position}.`);
+            if (!areas.some((area) => [1, 2, 3, 4, 5].includes(area))) {
+                const error = new Error(`${user.nombre} no tiene un rol de equipo y no puede recibir asignaciones.`);
                 error.status = 403;
                 throw error;
             }
