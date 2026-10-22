@@ -433,6 +433,173 @@
             .song-table th, .song-table td { padding:10px; }
             .pending-dialog { width:min(94vw,620px); border-radius:18px; }
         }
+
+        :root {
+            color-scheme: light;
+            --navy:#07182f;
+            --blue:#1686d9;
+            --steel:#b9dcf7;
+            --cream:#eef5fa;
+            --ink:#10253a;
+            --muted:#728397;
+            --line:rgba(106,142,174,.2);
+        }
+
+        body {
+            min-height:100vh;
+            background:
+                radial-gradient(ellipse at 8% 18%, rgba(107,190,255,.22), transparent 32%),
+                radial-gradient(ellipse at 94% 52%, rgba(54,147,221,.13), transparent 34%),
+                linear-gradient(155deg, #eaf4fb 0%, #f6f9fc 45%, #e9f2f8 100%);
+            color:var(--ink);
+            font-family:Inter, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .hero {
+            position:relative;
+            overflow:hidden;
+            padding:25px 22px 78px;
+            background:
+                radial-gradient(ellipse at 14% 110%, rgba(36,103,255,.78), transparent 45%),
+                radial-gradient(circle at 89% 32%, rgba(113,195,255,.2) 0 118px, transparent 120px),
+                linear-gradient(125deg, #07162a, #0b2d54 62%, #14649d);
+        }
+        .hero::after {
+            position:absolute;
+            right:18%;
+            bottom:-120px;
+            width:360px;
+            height:210px;
+            border-radius:50%;
+            background:rgba(66,154,255,.28);
+            content:'';
+            filter:blur(54px);
+            pointer-events:none;
+        }
+        .nav, .welcome { position:relative; z-index:1; }
+        .brand { font-size:16px; letter-spacing:.01em; }
+        .brand-icon { filter:drop-shadow(0 4px 12px rgba(95,184,255,.3)); }
+        .nav-right span { font-size:14px; font-weight:600; }
+        .logout { border-color:rgba(219,239,255,.42); border-radius:13px; background:rgba(255,255,255,.07); transition:background .18s, border-color .18s; }
+        .logout:hover { border-color:rgba(255,255,255,.7); background:rgba(255,255,255,.14); }
+        .welcome { margin-top:36px; }
+        .welcome p { color:#a9d7f7; letter-spacing:.15em; }
+        h1, h2, h3 { font-family:Inter, 'Segoe UI', system-ui, sans-serif; letter-spacing:-.035em; }
+        h1 { font-weight:700; }
+        .role-badge { border-color:rgba(209,235,255,.35); background:rgba(237,247,255,.12); color:#e1f2ff; backdrop-filter:blur(12px); }
+        main { position:relative; z-index:2; margin-top:-43px; }
+        .announcement {
+            position:relative;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.36);
+            background:
+                radial-gradient(ellipse at 5% 4%, rgba(54,57,255,.95), transparent 49%),
+                radial-gradient(ellipse at 95% 110%, rgba(94,183,255,.6), transparent 45%),
+                linear-gradient(125deg, #101a78, #124b88 74%, #1c649b);
+            box-shadow:0 18px 42px rgba(25,67,119,.2);
+        }
+        .announcement .tag { background:rgba(227,241,255,.48); color:#081d36; }
+        .announcement h2 { font-weight:700; letter-spacing:-.03em; }
+        .announcement-icon { background:rgba(235,246,255,.28); color:#f2f9ff; backdrop-filter:blur(10px); }
+        .panel {
+            border-color:rgba(255,255,255,.82);
+            border-radius:22px;
+            background:rgba(255,255,255,.9);
+            box-shadow:0 12px 34px rgba(31,74,115,.08);
+            backdrop-filter:blur(16px);
+        }
+        .panel h2 { color:#102a46; font-size:clamp(21px, 3vw, 25px); font-weight:700; }
+        .panel h3 { color:#18334f; font-weight:650; }
+        .service-card, .directory-row, .audit-row, .feed-card {
+            border-color:rgba(111,151,185,.2);
+            border-radius:16px;
+            background:rgba(255,255,255,.84);
+            box-shadow:0 4px 15px rgba(31,74,115,.035);
+        }
+        .service-card { padding:17px; }
+        .service-card h3 { color:#102a46; font-size:19px; }
+        .service-date { margin:5px 0; color:#63809a; }
+        .assignment-chip { border:1px solid rgba(97,157,207,.13); background:#edf6fd; color:#183856; }
+        .app-menu {
+            border-color:rgba(255,255,255,.84);
+            border-radius:17px;
+            background:rgba(255,255,255,.88);
+            box-shadow:0 8px 24px rgba(31,74,115,.07);
+            backdrop-filter:blur(16px);
+        }
+        .menu-link {
+            border-color:rgba(106,142,174,.22);
+            border-radius:11px;
+            color:#29435d;
+            transition:background .18s, border-color .18s, color .18s;
+        }
+        .menu-link:hover { border-color:rgba(22,134,217,.42); background:#f3f9fe; }
+        .menu-link[aria-current="page"] { border-color:#4aa8e7; background:#e8f5ff; color:#0877c1; }
+        .menu-link:focus-visible, .action-button:focus-visible, .logout:focus-visible,
+        .mobile-menu-toggle:focus-visible, .mobile-menu-close:focus-visible {
+            outline:3px solid rgba(65,164,231,.45);
+            outline-offset:2px;
+        }
+        .action-button, .save-role {
+            border-radius:12px;
+            background:linear-gradient(135deg, #278fe0, #166fc2);
+            box-shadow:0 6px 15px rgba(28,118,195,.2);
+            transition:transform .16s, box-shadow .16s, filter .16s;
+        }
+        .action-button:hover, .save-role:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 9px 20px rgba(28,118,195,.25); filter:saturate(1.08); }
+        .form-field input, .form-field select, .form-field textarea,
+        .directory-search, .song-search, .user-credentials input {
+            border-color:rgba(104,145,181,.28);
+            border-radius:12px;
+            background:rgba(250,253,255,.94);
+            transition:border-color .16s, box-shadow .16s, background .16s;
+        }
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus,
+        .directory-search:focus, .song-search:focus, .user-credentials input:focus {
+            outline:0;
+            border-color:#56a9e2;
+            background:#fff;
+            box-shadow:0 0 0 4px rgba(57,153,218,.13);
+        }
+        .user-row { border-color:rgba(111,151,185,.2); border-radius:17px; background:linear-gradient(145deg, rgba(255,255,255,.95), rgba(244,249,253,.92)); }
+        .role-option { border-color:rgba(106,142,174,.2); background:#fff; }
+        .role-option:has(input:checked) { border-color:rgba(29,139,214,.42); background:#eef8ff; color:#126cae; }
+        .song-table-wrap { border-color:rgba(106,142,174,.2); }
+        .song-table th { background:#f1f7fb; color:#29435d; }
+        .song-pagination button { border-radius:10px; transition:background .16s, border-color .16s; }
+        .song-pagination button:not(:disabled):hover { border-color:#69b4e7; background:#eff8ff; }
+        .song-picker { border-color:rgba(106,142,174,.2); background:#f1f7fb; }
+        .pending-dialog { border-color:rgba(255,255,255,.85); background:rgba(255,255,255,.97); backdrop-filter:blur(18px); }
+        .pending-dialog-title h2 { font-family:Inter, 'Segoe UI', system-ui, sans-serif; }
+        .mobile-menu-toggle {
+            border-color:rgba(255,255,255,.84) !important;
+            border-radius:14px !important;
+            color:#173a5c !important;
+            box-shadow:0 8px 24px rgba(31,74,115,.1) !important;
+        }
+        .mobile-menu-backdrop { backdrop-filter:blur(5px); }
+        .mobile-menu-heading { font-family:Inter, 'Segoe UI', system-ui, sans-serif !important; letter-spacing:-.03em; }
+
+        @media (max-width:650px) {
+            body { background:linear-gradient(180deg, #e9f3fa, #f7fafc 55%, #eaf3f8); }
+            .hero { padding:18px 16px 72px; }
+            .welcome { gap:13px; margin-top:29px; }
+            .welcome h1 { font-size:clamp(30px, 8vw, 39px); line-height:1.12; }
+            main { margin-top:-45px; }
+            .app-menu { border-radius:0 20px 20px 0; background:rgba(250,253,255,.98); }
+            .mobile-menu-heading { margin-bottom:13px; padding-bottom:17px; }
+            .menu-link { min-height:48px; border-radius:12px; }
+            .announcement { min-height:158px; padding:22px; border-radius:23px; }
+            .announcement h2 { font-size:27px; }
+            .panel { padding:20px; border-radius:21px; }
+            .service-card { padding:15px; }
+            .management-grid { gap:12px; }
+            .song-table-wrap { border-radius:12px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; }
+        }
     </style>
 </head>
 <body>

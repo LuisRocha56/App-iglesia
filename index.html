@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000e29">
-    <title>Mi Iglesia - Crear cuenta</title>
+    <title>Templo Getsemaní - Bienvenido</title>
     <style>
         :root {
             color-scheme: light;
@@ -18,6 +18,7 @@
         }
 
         * { box-sizing: border-box; }
+        [hidden] { display:none !important; }
 
         body {
             display: grid;
@@ -284,10 +285,314 @@
             .line { margin: 17px 0; }
             .field { margin-bottom: 11px; }
         }
+
+        :root {
+            --blue:#1686d9;
+            --blue-dark:#126bb5;
+            --navy:#07182f;
+            --steel:#b9dcf7;
+            --ink:#10253a;
+            --muted:#728397;
+            --line:rgba(106,142,174,.2);
+        }
+
+        body {
+            position:relative;
+            isolation:isolate;
+            overflow-x:hidden;
+            background:
+                radial-gradient(ellipse at 6% 12%, rgba(76,169,240,.4), transparent 31%),
+                radial-gradient(ellipse at 95% 87%, rgba(98,184,246,.4), transparent 35%),
+                linear-gradient(145deg, #dcecf8, #f4f8fb 49%, #dcebf7);
+            font-family:Inter, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body::before, body::after {
+            position:fixed;
+            z-index:-1;
+            width:36vw;
+            height:36vw;
+            min-width:260px;
+            min-height:260px;
+            border-radius:50%;
+            background:rgba(58,145,223,.28);
+            content:'';
+            filter:blur(75px);
+            pointer-events:none;
+        }
+        body::before { top:-18vw; left:12vw; }
+        body::after { right:-15vw; bottom:-22vw; background:rgba(22,104,185,.24); }
+        .page-card {
+            width:min(100%, 980px);
+            min-height:min(560px, calc(100vh - 48px));
+            padding:12px;
+            border:1px solid rgba(255,255,255,.78);
+            border-radius:32px;
+            background:rgba(255,255,255,.68);
+            box-shadow:0 30px 90px rgba(12,47,78,.2);
+            backdrop-filter:blur(22px);
+        }
+        .side-panel {
+            min-height:520px;
+            padding:clamp(30px, 4.5vw, 58px);
+            border-radius:24px;
+            background:
+                radial-gradient(ellipse at 12% 100%, rgba(42,93,255,.8), transparent 43%),
+                radial-gradient(ellipse at 100% 28%, rgba(84,168,237,.3), transparent 37%),
+                linear-gradient(145deg, #071629, #0b3158 66%, #155c91);
+        }
+        .side-panel::before, .side-panel::after {
+            z-index:0;
+            width:40%;
+            height:38%;
+            border-radius:50%;
+            background:rgba(64,150,255,.48);
+            filter:blur(48px);
+        }
+        .side-panel::before { bottom:-12%; left:3%; }
+        .side-panel::after { right:-12%; bottom:auto; left:auto; top:-3%; width:52%; height:58%; background:rgba(128,195,247,.19); }
+        .brand, .side-copy, .side-footer { position:relative; z-index:1; }
+        .brand { font-size:16px; letter-spacing:.01em; }
+        .brand-icon { border-color:rgba(222,241,255,.3); border-radius:13px; background:rgba(231,245,255,.08); }
+        .side-copy { padding-bottom:7%; }
+        .side-copy h1, .form-box h2 { font-family:Inter, 'Segoe UI', system-ui, sans-serif; letter-spacing:-.045em; }
+        .side-copy h1 { font-weight:650; }
+        .side-copy p { color:rgba(235,247,255,.75); }
+        .side-footer { color:rgba(225,242,255,.66); }
+        .form-panel { padding:clamp(26px, 4vw, 48px); }
+        .form-box h2 { color:#102a46; font-weight:700; }
+        .form-icon {
+            width:46px;
+            height:46px;
+            margin-bottom:13px;
+            border:1px solid rgba(107,169,214,.18);
+            border-radius:15px;
+            background:linear-gradient(145deg, #edf8ff, #fff);
+        }
+        .form-icon img { width:34px; height:34px; }
+        .help-text { color:#728397; }
+        .line { margin:18px 0; background:rgba(106,142,174,.2); }
+        .field { margin-bottom:14px; }
+        .field label, .group-label { color:#58718a; font-weight:600; }
+        .field input {
+            min-height:48px;
+            border-color:rgba(104,145,181,.28);
+            border-radius:13px;
+            background:rgba(250,253,255,.94);
+        }
+        .field input:focus {
+            border-color:#56a9e2;
+            background:#fff;
+            box-shadow:0 0 0 4px rgba(57,153,218,.13);
+        }
+        .submit-button {
+            min-height:48px;
+            border-radius:13px;
+            background:linear-gradient(135deg, #278fe0, #166fc2);
+            box-shadow:0 8px 20px rgba(28,118,195,.23);
+            transition:transform .16s, box-shadow .16s, filter .16s;
+        }
+        .submit-button:hover { background:linear-gradient(135deg, #2385d2, #125fa8); box-shadow:0 11px 24px rgba(28,118,195,.28); }
+        .submit-button:active { transform:translateY(1px); }
+        .mode-text { margin-top:17px; color:#728397; }
+        .mode-text button { color:#1377bd; text-decoration:none; }
+        .mode-text button:hover { text-decoration:underline; }
+        .welcome-screen {
+            position:fixed;
+            z-index:10;
+            inset:0;
+            display:flex;
+            min-height:100vh;
+            flex-direction:column;
+            justify-content:flex-end;
+            padding:clamp(24px, 7vw, 76px);
+            overflow:hidden;
+            background:
+                radial-gradient(ellipse at 54% 22%, rgba(48,143,255,.88), transparent 35%),
+                radial-gradient(ellipse at 22% 49%, rgba(31,93,182,.58), transparent 42%),
+                linear-gradient(180deg, #071a33 0%, #102d50 34%, #101820 71%, #080b10 100%);
+            color:#fff;
+        }
+        .welcome-screen::before {
+            position:absolute;
+            inset:-15%;
+            background:radial-gradient(ellipse at 50% 36%, rgba(97,179,255,.24), transparent 40%);
+            content:'';
+            filter:blur(26px);
+            pointer-events:none;
+        }
+        .welcome-screen::after {
+            position:absolute;
+            right:-17%;
+            bottom:32%;
+            width:min(78vw, 680px);
+            aspect-ratio:1;
+            border:1px solid rgba(196,228,255,.08);
+            border-radius:50%;
+            background:radial-gradient(circle, rgba(61,137,224,.12), transparent 67%);
+            content:'';
+            pointer-events:none;
+        }
+        .welcome-content {
+            position:relative;
+            z-index:1;
+            width:min(100%, 510px);
+            margin:0 auto;
+            animation:welcome-rise .65s ease both;
+        }
+        .welcome-kicker {
+            margin:0 0 8px;
+            color:rgba(232,244,255,.74);
+            font-size:12px;
+            font-weight:700;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+        }
+        .welcome-title {
+            max-width:500px;
+            margin:0;
+            color:#f7fbff;
+            font-size:clamp(34px, 7vw, 52px);
+            font-weight:600;
+            letter-spacing:-.055em;
+            line-height:1.04;
+        }
+        .welcome-title span { color:#65b7ff; }
+        .welcome-description {
+            max-width:390px;
+            margin:12px 0 24px;
+            color:rgba(230,239,249,.65);
+            font-size:14px;
+            line-height:1.5;
+        }
+        .welcome-next {
+            display:flex;
+            width:100%;
+            min-height:48px;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            border:1px solid rgba(177,220,255,.2);
+            border-radius:999px;
+            background:linear-gradient(100deg, rgba(91,157,204,.82), rgba(19,66,106,.95));
+            color:#fff;
+            font:inherit;
+            font-size:14px;
+            font-weight:700;
+            box-shadow:0 8px 24px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.13);
+            cursor:pointer;
+            transition:transform .18s, filter .18s;
+        }
+        .welcome-next:hover { transform:translateY(-2px); filter:brightness(1.12); }
+        .welcome-next span { font-size:18px; font-weight:400; }
+        .auth-tabs {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:4px;
+            margin:0 0 17px;
+            padding:4px;
+            border:1px solid rgba(106,142,174,.16);
+            border-radius:13px;
+            background:#f1f6fa;
+        }
+        .auth-tab {
+            min-height:40px;
+            border:0;
+            border-radius:10px;
+            background:transparent;
+            color:#687d91;
+            font:inherit;
+            font-size:13px;
+            font-weight:700;
+            cursor:pointer;
+            transition:background .16s, color .16s, box-shadow .16s;
+        }
+        .auth-tab[aria-selected="true"] {
+            background:#fff;
+            color:#126fb3;
+            box-shadow:0 2px 8px rgba(33,71,102,.1);
+        }
+        .back-to-welcome {
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            margin:0 0 15px;
+            padding:0;
+            border:0;
+            background:none;
+            color:#6d8499;
+            font:inherit;
+            font-size:13px;
+            cursor:pointer;
+        }
+        .back-to-welcome:hover { color:#126fb3; }
+        @keyframes welcome-rise {
+            from { opacity:0; transform:translateY(12px); }
+            to { opacity:1; transform:translateY(0); }
+        }
+        .field input:focus-visible, .submit-button:focus-visible, .mode-text button:focus-visible {
+            outline:3px solid rgba(65,164,231,.42);
+            outline-offset:3px;
+        }
+        .welcome-next:focus-visible, .auth-tab:focus-visible, .back-to-welcome:focus-visible {
+            outline:3px solid rgba(93,181,244,.65);
+            outline-offset:3px;
+        }
+
+        @media (max-width:760px) {
+            body { align-items:start; padding:clamp(12px, 4vw, 24px); }
+            .page-card {
+                width:min(100%, 520px);
+                min-height:0;
+                margin:auto;
+                padding:10px;
+                border-radius:27px;
+                background:rgba(255,255,255,.8);
+                box-shadow:0 22px 60px rgba(12,47,78,.19);
+            }
+            .side-panel {
+                min-height:clamp(180px, 28vh, 230px);
+                padding:clamp(18px, 5vw, 26px);
+                border-radius:20px;
+            }
+            .brand { font-size:15px; }
+            .brand-icon { width:36px; height:36px; }
+            .side-copy { padding-top:22px; }
+            .side-copy h1 { max-width:400px; font-size:clamp(29px, 8vw, 39px); line-height:1.08; }
+            .form-panel { padding:clamp(22px, 6vw, 34px) clamp(15px, 5vw, 25px) 20px; }
+            .form-icon { width:42px; height:42px; }
+            .line { margin:16px 0; }
+            .field { margin-bottom:13px; }
+            .welcome-screen { min-height:100svh; padding:24px clamp(22px, 7vw, 34px) max(28px, env(safe-area-inset-bottom)); }
+            .welcome-content { width:100%; }
+            .welcome-title { font-size:clamp(35px, 10vw, 47px); }
+            .welcome-description { max-width:320px; margin:12px 0 21px; font-size:13px; }
+            .welcome-screen::after { right:-35%; bottom:31%; width:115vw; }
+        }
+
+        @media (max-width:360px) {
+            body { padding:8px; }
+            .page-card { padding:8px; border-radius:23px; }
+            .side-panel { min-height:165px; padding:16px; border-radius:17px; }
+            .form-panel { padding:20px 13px 16px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; }
+        }
     </style>
 </head>
 <body>
-    <main class="page-card">
+    <section class="welcome-screen" id="welcomeScreen" aria-labelledby="welcomeTitle">
+        <div class="welcome-content">
+            <p class="welcome-kicker">Templo Getsemaní</p>
+            <h1 class="welcome-title" id="welcomeTitle">Una comunidad unida por la <span>fe.</span></h1>
+            <p class="welcome-description">Conecta con tu congregación, comparte tus dones y sirve junto a tu comunidad.</p>
+            <button class="welcome-next" id="welcomeNext" type="button">Siguiente <span aria-hidden="true">→</span></button>
+        </div>
+    </section>
+
+    <main class="page-card" id="authPage" hidden>
         <aside class="side-panel">
             <div class="brand">
                 <span class="brand-icon"><img src="src/images/Logo/LOGO_Blanco.png" alt=""></span>
@@ -303,9 +608,14 @@
         <section class="form-panel" aria-labelledby="formTitle">
             <div class="form-box">
                 <div class="form-icon"><img src="src/images/Logo/LOGO_Bicolor.png" alt=""></div>
+                <button class="back-to-welcome" id="backToWelcome" type="button"><span aria-hidden="true">←</span> Volver</button>
                 <h2 id="formTitle">Crear cuenta</h2>
                 <p class="help-text" id="formSubtitle">Bienvenido a Mi Iglesia. Comencemos.</p>
                 <hr class="line">
+                <div class="auth-tabs" role="tablist" aria-label="Elige cómo continuar">
+                    <button class="auth-tab" id="loginTab" type="button" role="tab" aria-selected="false">Iniciar sesión</button>
+                    <button class="auth-tab" id="registerTab" type="button" role="tab" aria-selected="true">Crear cuenta</button>
+                </div>
 
                 <form id="authForm" novalidate>
                     <div class="field" id="nameField">
@@ -332,10 +642,6 @@
                     <button class="submit-button" id="submitButton" type="submit">Crear cuenta</button>
                 </form>
 
-                <p class="mode-text">
-                    <span id="modePrompt">¿Ya tienes cuenta?</span>
-                    <button id="modeToggle" type="button">Iniciar sesión</button>
-                </p>
             </div>
         </section>
     </main>
@@ -343,6 +649,8 @@
     <script src="api-config.js"></script>
     <script src="app.js"></script>
     <script>
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const authPage = document.getElementById('authPage');
         const authForm = document.getElementById('authForm');
         const formTitle = document.getElementById('formTitle');
         const formSubtitle = document.getElementById('formSubtitle');
@@ -352,9 +660,12 @@
         const passwordLabel = document.getElementById('passwordLabel');
         const formMessage = document.getElementById('formMessage');
         const submitButton = document.getElementById('submitButton');
-        const modePrompt = document.getElementById('modePrompt');
-        const modeToggle = document.getElementById('modeToggle');
-        let mode = new URLSearchParams(window.location.search).get('modo') === 'login'
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const searchParams = new URLSearchParams(window.location.search);
+        const requestedMode = searchParams.get('modo');
+        const openAuthImmediately = ['login', 'registro', 'register'].includes(requestedMode);
+        let mode = requestedMode === 'login'
             ? 'login'
             : 'register';
 
@@ -373,8 +684,8 @@
             passwordLabel.textContent = registering ? 'Crear contraseña' : 'Contraseña';
             passwordInput.minLength = registering ? 8 : 1;
             submitButton.textContent = registering ? 'Crear cuenta' : 'Iniciar sesión';
-            modePrompt.textContent = registering ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?';
-            modeToggle.textContent = registering ? 'Iniciar sesión' : 'Crear cuenta';
+            loginTab.setAttribute('aria-selected', String(!registering));
+            registerTab.setAttribute('aria-selected', String(registering));
             formMessage.textContent = '';
             if (updateUrl) {
                 const url = new URL(window.location.href);
@@ -383,8 +694,22 @@
             }
         }
 
-        modeToggle.addEventListener('click', () => {
-            setMode(mode === 'register' ? 'login' : 'register');
+        loginTab.addEventListener('click', () => setMode('login'));
+        registerTab.addEventListener('click', () => setMode('register'));
+
+        document.getElementById('welcomeNext').addEventListener('click', () => {
+            welcomeScreen.hidden = true;
+            authPage.hidden = false;
+            document.getElementById(mode === 'register' ? 'nombre' : 'email').focus();
+        });
+
+        document.getElementById('backToWelcome').addEventListener('click', () => {
+            authPage.hidden = true;
+            welcomeScreen.hidden = false;
+            const url = new URL(window.location.href);
+            url.searchParams.delete('modo');
+            window.history.replaceState({}, '', url);
+            document.getElementById('welcomeNext').focus();
         });
 
         async function restoreSession() {
@@ -444,6 +769,10 @@
         });
 
         setMode(mode, false);
+        if (openAuthImmediately) {
+            welcomeScreen.hidden = true;
+            authPage.hidden = false;
+        }
         restoreSession();
     </script>
 </body>
