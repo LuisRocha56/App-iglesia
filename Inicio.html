@@ -233,26 +233,37 @@
         .user-list { display:grid; gap:10px; }
         .user-row {
             display:grid;
-            grid-template-columns: minmax(0, 1fr) minmax(175px, 1fr) auto;
+            grid-template-columns:minmax(180px, .9fr) minmax(280px, 1.8fr) auto;
+            grid-template-areas:"identity roles save" "credentials credentials credentials";
             align-items:center;
-            gap:12px;
-            padding:12px;
-            border:1px solid #e9edf4;
-            border-radius:12px;
+            gap:14px 18px;
+            padding:17px;
+            border:1px solid var(--line);
+            border-radius:15px;
+            background:linear-gradient(135deg, #fff, #f8faff);
         }
+        .user-identity { grid-area:identity; min-width:0; }
+        .user-credentials { grid-area:credentials; display:flex; align-items:center; gap:9px; padding-top:12px; border-top:1px solid var(--line); }
+        .user-credentials input { width:min(100%, 300px); min-height:38px; padding:8px 11px; border:1px solid #d8deea; border-radius:9px; font:inherit; }
+        .user-row > .role-options { grid-area:roles; align-content:center; gap:8px; }
+        .user-row > .save-role { grid-area:save; white-space:nowrap; }
         .user-name { color:var(--navy); font-weight:700; }
         .user-meta { margin-top:3px; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
         .role-options {
             display:flex;
             flex-wrap:wrap;
-            gap:7px 12px;
+            gap:8px 10px;
+            min-width:0;
             margin:0;
             padding:0;
             border:0;
         }
-        .role-options legend { flex:0 0 100%; margin-bottom:5px; color:var(--muted); font-size:12px; }
-        .role-option { display:flex; align-items:center; gap:5px; color:var(--ink); font-size:13px; }
-        .role-option input { accent-color:var(--blue); }
+        .role-options legend { flex:0 0 100%; margin-bottom:3px; color:var(--muted); font-size:12px; font-weight:700; }
+        .role-option, .form-field.role-option { display:flex; align-items:center; gap:8px; color:var(--ink); font-size:13px; }
+        .role-option { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+        .role-option input { width:16px; height:16px; flex:0 0 auto; margin:0; accent-color:var(--blue); }
+        .role-options.create-role-options { display:flex; gap:9px; padding:4px 0; }
+        .create-role-options .role-option { min-height:38px; }
         .save-role {
             min-height:38px;
             padding:0 13px;
@@ -312,15 +323,39 @@
         .notification-count { display:inline-grid; min-width:20px; height:20px; place-items:center; padding:0 5px; border-radius:999px; background:#b42318; color:white; font-size:11px; }
         .directory-group { margin-top:18px; }
         .directory-search { width:100%; min-height:40px; margin:10px 0; padding:9px 11px; border:1px solid #d8deea; border-radius:9px; font:inherit; }
-        .song-table-wrap { overflow-x:auto; margin-top:12px; }
+        .song-search { width:100%; min-height:44px; margin:14px 0 8px; padding:10px 13px; border:1px solid #d8deea; border-radius:11px; background:#fff; color:var(--ink); font:inherit; }
+        .song-results-meta { margin:0 0 6px !important; color:var(--muted); font-size:12px; }
+        .song-table-wrap { overflow-x:auto; margin-top:12px; border:1px solid var(--line); border-radius:13px; background:#fff; }
         .song-table { width:100%; border-collapse:collapse; text-align:left; }
-        .song-table th, .song-table td { padding:11px; border-bottom:1px solid var(--line); vertical-align:top; }
+        .song-table th, .song-table td { padding:12px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+        .song-table tbody tr:last-child td { border-bottom:0; }
+        .song-table tbody tr:nth-child(even) { background:#f8faff; }
         .song-table th { color:var(--navy); font-size:13px; }
         .song-table td { color:var(--muted); font-size:13px; }
+        .song-pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:13px; }
+        .song-pagination button { min-height:36px; padding:0 13px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--navy); font:inherit; font-weight:700; cursor:pointer; }
+        .song-pagination button:disabled { opacity:.45; cursor:not-allowed; }
+        .song-page-status { color:var(--muted); font-size:13px; }
+        .song-picker-search { margin-bottom:9px; }
+        .song-picker { display:grid; max-height:230px; gap:6px; overflow-y:auto; padding:8px; border:1px solid var(--line); border-radius:11px; background:#f8faff; }
+        .song-picker-option { display:flex; align-items:center; gap:9px; min-height:38px; padding:7px 9px; border:1px solid transparent; border-radius:8px; background:#fff; color:var(--ink); font-size:13px; cursor:pointer; }
+        .song-picker-option:hover { border-color:#cbd8f1; background:#f0f4ff; }
+        .song-picker-option input { width:16px; height:16px; flex:0 0 auto; margin:0; accent-color:var(--blue); }
+        .song-picker-empty { margin:0 !important; padding:10px; color:var(--muted); font-size:13px; }
         .feed-image { display:block; max-width:min(100%,520px); max-height:320px; margin-top:10px; border-radius:10px; object-fit:contain; }
-        .pending-dialog { width:min(92vw,560px); max-height:85vh; overflow:auto; border:1px solid var(--line); border-radius:16px; padding:22px; color:var(--ink); }
-        .pending-dialog::backdrop { background:rgba(0,10,30,.55); }
-        .pending-dialog h2 { color:var(--navy); }
+        .pending-dialog { width:min(92vw,620px); max-height:min(82vh,760px); overflow:auto; border:1px solid rgba(255,255,255,.82); border-radius:22px; padding:0; color:var(--ink); box-shadow:0 28px 90px rgba(0,14,41,.32); }
+        .pending-dialog::backdrop { background:rgba(0,10,30,.62); backdrop-filter:blur(5px); }
+        .pending-dialog-content { padding:clamp(22px,5vw,34px); }
+        .pending-dialog-heading { display:flex; align-items:center; gap:15px; margin-bottom:18px; }
+        .pending-dialog-icon { display:grid; width:48px; height:48px; flex:0 0 auto; place-items:center; border-radius:15px; background:#fff5d8; color:#9a6700; font-size:23px; }
+        .pending-dialog-title { min-width:0; }
+        .pending-dialog-title h2 { margin:0; color:var(--navy); font-size:clamp(22px,4vw,28px); }
+        .pending-dialog-count { display:inline-flex; align-items:center; min-height:23px; margin-top:6px; padding:2px 9px; border-radius:999px; background:#fff5d8; color:#805600; font-size:12px; font-weight:800; }
+        .pending-dialog-description { margin:0 0 18px !important; color:var(--muted); line-height:1.6; }
+        .pending-dialog .feed-list { max-height:42vh; overflow:auto; margin:0 0 18px; padding-right:3px; }
+        .pending-dialog .feed-card { padding:15px 16px; border-radius:14px; box-shadow:0 4px 14px rgba(32,54,111,.05); }
+        .pending-dialog form { display:flex; justify-content:flex-end; padding-top:15px; border-top:1px solid var(--line); }
+        .pending-dialog .action-button { min-width:105px; }
         .directory-list[hidden] { display:none !important; }
         [hidden] { display:none !important; }
 
@@ -337,9 +372,13 @@
             .content-grid { grid-template-columns:1fr; }
             .management-grid, .form-grid { grid-template-columns:1fr; }
             .form-field.full { grid-column:auto; }
-            .user-row { grid-template-columns:minmax(0, 1fr); }
-            .role-options { grid-column:1 / -1; }
-            .save-role { grid-column:1; grid-row:auto; justify-self:end; }
+            .user-row { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"identity save" "roles roles" "credentials credentials"; }
+            .user-row > .role-options { grid-column:1 / -1; }
+            .user-row > .save-role { justify-self:end; }
+            .user-credentials { align-items:stretch; flex-direction:column; }
+            .user-credentials input { width:100%; }
+            .song-table th, .song-table td { padding:10px; }
+            .pending-dialog { width:min(94vw,620px); border-radius:18px; }
         }
     </style>
 </head>
@@ -495,12 +534,15 @@
                 <button class="action-button" type="submit">Agregar canción</button>
             </form>
             <p class="status" id="songStatus" role="status" aria-live="polite"></p>
+            <input class="song-search" id="songSearch" type="search" placeholder="Buscar por canción o autor…" aria-label="Buscar canciones por título o autor">
+            <p class="song-results-meta" id="songResultsMeta" aria-live="polite"></p>
             <div class="song-table-wrap">
                 <table class="song-table">
                     <thead><tr><th>Canto</th><th>Autor</th><th>Secuencia</th><th>Última vez tocado</th><th>Recursos</th></tr></thead>
                     <tbody id="songList"></tbody>
                 </table>
             </div>
+            <nav class="song-pagination" id="songPagination" aria-label="Páginas del repertorio"></nav>
         </section>
 
         <section class="panel role-access" id="multimediaPanel" data-view-section="media" hidden>
@@ -582,9 +624,12 @@
                         <label class="form-field full">Detalles
                             <textarea name="details" maxlength="2000"></textarea>
                         </label>
-                        <label class="form-field full">Cantos del servicio (Ctrl/Cmd para seleccionar varios)
-                            <select name="songIds" id="serviceSongSelect" multiple size="6"></select>
-                        </label>
+                        <div class="form-field full">
+                            <span>Buscar y seleccionar cantos del servicio</span>
+                            <input class="song-picker-search" id="serviceSongSearch" type="search" placeholder="Escribe el nombre o autor del canto…" autocomplete="off">
+                            <div class="song-picker" id="serviceSongPicker" role="group" aria-label="Cantos disponibles"></div>
+                            <span class="song-results-meta" id="serviceSongSelectionCount" aria-live="polite">0 cantos seleccionados</span>
+                        </div>
                         <button class="action-button" type="submit">Guardar evento</button>
                         <button class="action-button" id="cancelServiceEdit" type="button" hidden>Cancelar edición</button>
                     </div>
@@ -608,10 +653,18 @@
             <div class="service-list" id="serviceList"></div>
         </section>
         <dialog class="pending-dialog" id="pendingPrayerDialog" aria-labelledby="pendingPrayerTitle">
-            <h2 id="pendingPrayerTitle">Peticiones por revisar</h2>
-            <p>Hay peticiones de oración pendientes de aprobación. Esta ventana solo muestra la información; puedes gestionarlas en el apartado de Coordinación.</p>
-            <div class="feed-list" id="pendingPrayerDialogList"></div>
-            <form method="dialog"><button class="action-button" type="submit">Cerrar</button></form>
+            <div class="pending-dialog-content">
+                <div class="pending-dialog-heading">
+                    <span class="pending-dialog-icon" aria-hidden="true">!</span>
+                    <div class="pending-dialog-title">
+                        <h2 id="pendingPrayerTitle">Peticiones por revisar</h2>
+                        <span class="pending-dialog-count" id="pendingPrayerDialogCount">Pendientes de aprobación</span>
+                    </div>
+                </div>
+                <p class="pending-dialog-description">Hay peticiones de oración que necesitan revisión. Esta ventana solo muestra la información; puedes aprobarlas o rechazarlas en el apartado de Coordinación.</p>
+                <div class="feed-list" id="pendingPrayerDialogList"></div>
+                <form method="dialog"><button class="action-button" type="submit">Cerrar ventana</button></form>
+            </div>
         </dialog>
 
         <section class="panel role-access" id="masterPanel" data-view-section="admin" hidden>
@@ -653,7 +706,7 @@
                     <label class="form-field">Contraseña inicial
                         <input name="password" type="password" minlength="8" maxlength="72" required>
                     </label>
-                    <fieldset class="role-options form-field full">
+                    <fieldset class="role-options create-role-options form-field full">
                         <legend>Roles iniciales</legend>
                         <label class="role-option"><input type="checkbox" name="areas" value="1">Músico</label>
                         <label class="role-option"><input type="checkbox" name="areas" value="2">Coordinador</label>
@@ -707,6 +760,10 @@
         let menuPermissions = {};
         let currentUserId = '';
         let currentUserAreas = [];
+        let currentSongs = [];
+        let currentSongPage = 1;
+        const selectedServiceSongIds = new Set();
+        const songsPerPage = 10;
         const positionSelect = document.querySelector('#assignmentForm [name="position"]');
         Object.keys(positionRoles).forEach((position) => {
             const option = document.createElement('option');
@@ -763,6 +820,7 @@
                 const row = document.createElement('div');
                 row.className = 'user-row';
                 const identity = document.createElement('div');
+                identity.className = 'user-identity';
                 addTextElement(identity, 'div', 'user-name', user.nombre);
                 addTextElement(identity, 'div', 'user-meta', `${user.email} · ${user.category === 'worship' ? 'Alabanza' : 'Congregación'}`);
                 row.appendChild(identity);
@@ -815,7 +873,7 @@
                 row.appendChild(saveButton);
                 if (String(user.id) !== String(currentUserId)) {
                     const credentials = document.createElement('div');
-                    credentials.className = 'inline-actions';
+                    credentials.className = 'user-credentials';
                     const passwordInput = document.createElement('input');
                     passwordInput.type = 'password';
                     passwordInput.minLength = 8;
@@ -1007,10 +1065,10 @@
                         date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
                         form.elements.startsAt.value = date.toISOString().slice(0, 16);
                         form.elements.details.value = service.details || '';
-                        const selectedSongIds = new Set((service.songs || []).map((song) => String(song.id)));
-                        [...form.elements.songIds.options].forEach((option) => {
-                            option.selected = selectedSongIds.has(option.value);
-                        });
+                        selectedServiceSongIds.clear();
+                        (service.songs || []).forEach((song) => selectedServiceSongIds.add(String(song.id)));
+                        document.getElementById('serviceSongSearch').value = '';
+                        renderServiceSongPicker();
                         form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
                         document.getElementById('cancelServiceEdit').hidden = false;
                         form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1230,6 +1288,8 @@
             const badge = document.getElementById('pendingPrayerBadge');
             badge.textContent = String(pendingPrayers.length);
             badge.hidden = !canManageCommunity || pendingPrayers.length === 0;
+            document.getElementById('pendingPrayerDialogCount').textContent =
+                `${pendingPrayers.length} ${pendingPrayers.length === 1 ? 'petición pendiente' : 'peticiones pendientes'}`;
             if (document.querySelector('[data-view="coordination"]')?.getAttribute('aria-current') === 'page') {
                 showPendingPrayerDialogIfNeeded();
             }
@@ -1317,11 +1377,17 @@
             link.rel = 'noopener noreferrer';
         }
 
-        async function loadSongs() {
-            const { songs } = await MiIglesia.request('/api/songs');
+        function renderSongTable() {
             const list = document.getElementById('songList');
             list.replaceChildren();
-            songs.forEach((song) => {
+            const query = document.getElementById('songSearch').value.trim().toLocaleLowerCase('es-MX');
+            const filteredSongs = currentSongs.filter((song) =>
+                `${song.title} ${song.author || ''}`.toLocaleLowerCase('es-MX').includes(query)
+            );
+            const pageCount = Math.max(1, Math.ceil(filteredSongs.length / songsPerPage));
+            currentSongPage = Math.min(currentSongPage, pageCount);
+            const startIndex = (currentSongPage - 1) * songsPerPage;
+            filteredSongs.slice(startIndex, startIndex + songsPerPage).forEach((song) => {
                 const row = document.createElement('tr');
                 const title = document.createElement('td');
                 addTextElement(title, 'strong', '', song.title);
@@ -1360,23 +1426,92 @@
                 row.appendChild(resourceCell);
                 list.appendChild(row);
             });
-            if (!songs.length) {
+            if (!filteredSongs.length) {
                 const row = document.createElement('tr');
-                const cell = addTextElement(row, 'td', 'empty-state', 'El repertorio está vacío.');
+                const cell = addTextElement(
+                    row,
+                    'td',
+                    'empty-state',
+                    currentSongs.length ? 'No hay canciones que coincidan con la búsqueda.' : 'El repertorio está vacío.'
+                );
                 cell.colSpan = 5;
                 list.appendChild(row);
             }
-            const songSelect = document.getElementById('serviceSongSelect');
-            const selectedIds = new Set([...songSelect.selectedOptions].map((option) => option.value));
-            songSelect.replaceChildren();
-            songs.forEach((song) => {
-                const option = document.createElement('option');
-                option.value = String(song.id);
-                option.textContent = `${song.title}${song.author ? ` · ${song.author}` : ''}`;
-                option.selected = selectedIds.has(option.value);
-                songSelect.appendChild(option);
+            document.getElementById('songResultsMeta').textContent = filteredSongs.length
+                ? `Mostrando ${startIndex + 1}–${Math.min(startIndex + songsPerPage, filteredSongs.length)} de ${filteredSongs.length} canciones`
+                : '0 canciones';
+            const pagination = document.getElementById('songPagination');
+            pagination.replaceChildren();
+            const previous = addTextElement(pagination, 'button', '', 'Anterior');
+            previous.type = 'button';
+            previous.disabled = currentSongPage === 1;
+            previous.addEventListener('click', () => {
+                currentSongPage -= 1;
+                renderSongTable();
+            });
+            addTextElement(pagination, 'span', 'song-page-status', `Página ${currentSongPage} de ${pageCount}`);
+            const next = addTextElement(pagination, 'button', '', 'Siguiente');
+            next.type = 'button';
+            next.disabled = currentSongPage >= pageCount;
+            next.addEventListener('click', () => {
+                currentSongPage += 1;
+                renderSongTable();
             });
         }
+
+        function renderServiceSongPicker() {
+            const picker = document.getElementById('serviceSongPicker');
+            const query = document.getElementById('serviceSongSearch').value.trim().toLocaleLowerCase('es-MX');
+            const filteredSongs = currentSongs.filter((song) =>
+                `${song.title} ${song.author || ''}`.toLocaleLowerCase('es-MX').includes(query)
+            );
+            picker.replaceChildren();
+            filteredSongs.forEach((song) => {
+                const label = document.createElement('label');
+                label.className = 'song-picker-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = String(song.id);
+                checkbox.checked = selectedServiceSongIds.has(checkbox.value);
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) selectedServiceSongIds.add(checkbox.value);
+                    else selectedServiceSongIds.delete(checkbox.value);
+                });
+                label.append(checkbox, document.createTextNode(
+                    `${song.title}${song.author ? ` · ${song.author}` : ''}`
+                ));
+                picker.appendChild(label);
+            });
+            if (!filteredSongs.length) {
+                addTextElement(
+                    picker,
+                    'p',
+                    'song-picker-empty',
+                    currentSongs.length ? 'No hay canciones que coincidan con la búsqueda.' : 'No hay canciones disponibles.'
+                );
+            }
+            const count = selectedServiceSongIds.size;
+            picker.setAttribute('aria-label', `${count} cantos seleccionados`);
+            document.getElementById('serviceSongSelectionCount').textContent =
+                `${count} ${count === 1 ? 'canto seleccionado' : 'cantos seleccionados'}`;
+        }
+
+        async function loadSongs() {
+            const { songs } = await MiIglesia.request('/api/songs');
+            currentSongs = songs;
+            const availableIds = new Set(songs.map((song) => String(song.id)));
+            selectedServiceSongIds.forEach((id) => {
+                if (!availableIds.has(id)) selectedServiceSongIds.delete(id);
+            });
+            renderSongTable();
+            renderServiceSongPicker();
+        }
+
+        document.getElementById('songSearch').addEventListener('input', () => {
+            currentSongPage = 1;
+            renderSongTable();
+        });
+        document.getElementById('serviceSongSearch').addEventListener('input', renderServiceSongPicker);
 
         async function loadResources() {
             const { resources } = await MiIglesia.request('/api/resources');
@@ -1474,11 +1609,13 @@
                     eventType: data.get('eventType'),
                         startsAt: new Date(data.get('startsAt')).toISOString(),
                         details: String(data.get('details') || '').trim(),
-                        songIds: data.getAll('songIds')
+                        songIds: [...selectedServiceSongIds]
                     })
                     }
                 );
                 form.reset();
+                selectedServiceSongIds.clear();
+                renderServiceSongPicker();
                 button.textContent = 'Guardar evento';
                 document.getElementById('cancelServiceEdit').hidden = true;
                 servicesStatus.textContent = serviceId ? 'Evento actualizado.' : 'Culto o evento programado.';
@@ -1519,6 +1656,8 @@
         document.getElementById('cancelServiceEdit').addEventListener('click', () => {
             const form = document.getElementById('serviceForm');
             form.reset();
+            selectedServiceSongIds.clear();
+            renderServiceSongPicker();
             form.querySelector('button[type="submit"]').textContent = 'Guardar evento';
             document.getElementById('cancelServiceEdit').hidden = true;
         });
