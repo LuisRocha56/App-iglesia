@@ -312,6 +312,7 @@
         .app-menu { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; padding:12px; border:1px solid var(--line); border-radius:14px; background:#fff; }
         .menu-link { min-height:38px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--navy); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
         .menu-link[aria-current="page"] { border-color:var(--blue); background:#edf3ff; color:var(--blue); }
+        .mobile-menu-toggle, .mobile-menu-backdrop, .mobile-menu-heading { display:none; }
         .feed-list { display:grid; gap:10px; margin-top:12px; }
         .feed-card { padding:14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
         .feed-card h3 { margin:0 0 6px; color:var(--navy); font-size:18px; }
@@ -362,6 +363,58 @@
         @media (max-width: 650px) {
             .hero { padding:18px 16px 69px; }
             main { padding:0 14px 38px; }
+            .mobile-menu-toggle {
+                display:flex;
+                width:100%;
+                min-height:46px;
+                align-items:center;
+                justify-content:center;
+                gap:10px;
+                margin:0 0 14px;
+                border:1px solid var(--line);
+                border-radius:12px;
+                background:#fff;
+                color:var(--navy);
+                font:inherit;
+                font-weight:800;
+                box-shadow:0 5px 16px rgba(32,54,111,.08);
+                cursor:pointer;
+            }
+            .mobile-menu-icon { display:grid; gap:4px; }
+            .mobile-menu-icon span { display:block; width:18px; height:2px; border-radius:2px; background:currentColor; }
+            .mobile-menu-backdrop {
+                position:fixed;
+                z-index:20;
+                inset:0;
+                display:block;
+                width:100%;
+                height:100%;
+                border:0;
+                background:rgba(0,10,30,.55);
+            }
+            .app-menu {
+                position:fixed;
+                z-index:21;
+                inset:0 auto 0 0;
+                display:none;
+                width:min(84vw, 340px);
+                flex-direction:column;
+                flex-wrap:nowrap;
+                gap:7px;
+                margin:0;
+                padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+                overflow-y:auto;
+                border:0;
+                border-right:1px solid var(--line);
+                border-radius:0 18px 18px 0;
+                box-shadow:16px 0 44px rgba(0,14,41,.2);
+            }
+            .app-menu[data-open="true"] { display:flex; }
+            .mobile-menu-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; padding:4px 2px 15px; border-bottom:1px solid var(--line); color:var(--navy); font-family:Georgia, 'Times New Roman', serif; font-size:20px; font-weight:700; }
+            .mobile-menu-close { display:grid; width:38px; height:38px; flex:0 0 auto; place-items:center; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--navy); font:inherit; font-size:22px; cursor:pointer; }
+            .menu-link { display:flex; width:100%; min-height:46px; align-items:center; justify-content:space-between; gap:10px; padding:0 13px; text-align:left; }
+            .menu-link[aria-current="page"] { background:#edf3ff; }
+            body.mobile-menu-open { overflow:hidden; }
             .welcome { align-items:start; flex-direction:column; margin-top:32px; }
             .stats { gap:8px; }
             .stat { padding:13px 5px; }
@@ -401,7 +454,16 @@
     </header>
 
     <main>
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-controls="appMenu" aria-expanded="false">
+            <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span>Menú</span>
+        </button>
+        <button class="mobile-menu-backdrop" id="mobileMenuBackdrop" type="button" aria-label="Cerrar menú" hidden></button>
         <nav class="app-menu" id="appMenu" aria-label="Menú principal">
+            <div class="mobile-menu-heading">
+                <span>Navegación</span>
+                <button class="mobile-menu-close" id="mobileMenuClose" type="button" aria-label="Cerrar menú">&times;</button>
+            </div>
             <button class="menu-link" type="button" data-view="home" aria-current="page">Inicio</button>
             <button class="menu-link" type="button" data-view="services">Eventos y cultos</button>
             <button class="menu-link" type="button" data-view="prayers">Peticiones de oración</button>
@@ -780,6 +842,26 @@
             return element;
         }
 
+        function closeMobileMenu() {
+            const wasOpen = document.getElementById('appMenu').dataset.open === 'true';
+            document.getElementById('appMenu').dataset.open = 'false';
+            document.getElementById('mobileMenuToggle').setAttribute('aria-expanded', 'false');
+            document.getElementById('mobileMenuBackdrop').hidden = true;
+            document.body.classList.remove('mobile-menu-open');
+            if (wasOpen && window.matchMedia('(max-width: 650px)').matches) {
+                document.getElementById('mobileMenuToggle').focus();
+            }
+        }
+
+        function openMobileMenu() {
+            if (!window.matchMedia('(max-width: 650px)').matches) return;
+            document.getElementById('appMenu').dataset.open = 'true';
+            document.getElementById('mobileMenuToggle').setAttribute('aria-expanded', 'true');
+            document.getElementById('mobileMenuBackdrop').hidden = false;
+            document.body.classList.add('mobile-menu-open');
+            document.getElementById('mobileMenuClose').focus();
+        }
+
         function setActiveView(view) {
             document.querySelectorAll('[data-view-section]').forEach((section) => {
                 section.hidden = section.dataset.viewSection !== view;
@@ -788,6 +870,7 @@
                 if (button.dataset.view === view) button.setAttribute('aria-current', 'page');
                 else button.removeAttribute('aria-current');
             });
+            closeMobileMenu();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -810,6 +893,20 @@
                 setActiveView(button.dataset.view);
                 if (button.dataset.view === 'coordination') showPendingPrayerDialogIfNeeded();
             }
+        });
+        document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+            if (document.getElementById('appMenu').dataset.open === 'true') closeMobileMenu();
+            else openMobileMenu();
+        });
+        document.getElementById('mobileMenuClose').addEventListener('click', closeMobileMenu);
+        document.getElementById('mobileMenuBackdrop').addEventListener('click', closeMobileMenu);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.getElementById('appMenu').dataset.open === 'true') {
+                closeMobileMenu();
+            }
+        });
+        window.addEventListener('resize', () => {
+            if (!window.matchMedia('(max-width: 650px)').matches) closeMobileMenu();
         });
 
         async function loadUsers(currentUserId) {
