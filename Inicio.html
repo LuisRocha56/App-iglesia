@@ -945,6 +945,10 @@
                             <div class="assignment-draft-list" id="assignmentDraftList" aria-live="polite"></div>
                         </div>
                         <button class="action-button" id="finalizeAssignmentBtn" type="button" disabled>Terminar asignación de equipo</button>
+                        <button class="action-button" id="openAssignmentWhatsAppBtn" type="button" disabled>Abrir chat de coordinación en WhatsApp</button>
+                        <label class="form-field" id="assignmentWhatsAppMessageField" hidden>Mensaje para coordinación
+                            <textarea id="assignmentWhatsAppMessage" readonly></textarea>
+                        </label>
                     </div>
                 </form>
             </div>
@@ -1051,6 +1055,7 @@
         let currentServices = [];
         let directoryUsers = [];
         const pendingAssignmentsByService = new Map();
+        const finalizedAssignmentMessages = new Map();
         let canManageServices = false;
         let canManageCommunity = false;
         let canSeeTeam = false;
@@ -1304,8 +1309,10 @@
             const drafts = pendingAssignmentsByService.get(serviceId) || [];
             const list = document.getElementById('assignmentDraftList');
             const finishButton = document.getElementById('finalizeAssignmentBtn');
+            const whatsappButton = document.getElementById('openAssignmentWhatsAppBtn');
             list.replaceChildren();
             finishButton.disabled = !drafts.length;
+            whatsappButton.disabled = !finalizedAssignmentMessages.has(serviceId) || drafts.length > 0;
             if (!drafts.length) {
                 addTextElement(list, 'p', 'assignment-draft-empty', 'Las asignaciones aparecerán aquí antes de guardarse.');
                 return;
@@ -2064,6 +2071,19 @@
                         })
                     }
                 );
+                const service = currentServices.find((item) => String(item.id) === serviceId);
+                const eventLabel = service
+                    ? `${service.title} · ${formatServiceDate(service.starts_at)}`
+                    : 'culto o evento';
+                const roleLines = result.assignments.map((assignment) =>
+                    `• ${assignment.name} — ${assignment.position}`
+                );
+                finalizedAssignmentMessages.set(
+                    serviceId,
+                    `Hola, te comparto el equipo asignado para ${eventLabel}:\n${roleLines.join('\n')}`
+                );
+                document.getElementById('assignmentWhatsAppMessage').value =
+                    finalizedAssignmentMessages.get(serviceId);
                 pendingAssignmentsByService.delete(serviceId);
                 renderAssignmentDrafts();
                 const notifications = result.notifications || { sent: [], failed: [], skipped: [] };
@@ -2091,6 +2111,23 @@
                 controls.forEach((control) => { control.disabled = false; });
                 renderAssignmentDrafts();
                 refreshAssignmentOptions();
+            }
+        });
+        document.getElementById('openAssignmentWhatsAppBtn').addEventListener('click', async () => {
+            const serviceId = document.querySelector('#assignmentForm [name="serviceId"]').value;
+            const message = finalizedAssignmentMessages.get(serviceId);
+            if (!message) return;
+
+            const chatUrl = `https://wa.me/528182012236?text=${encodeURIComponent(message)}`;
+            window.open(chatUrl, '_blank', 'noopener,noreferrer');
+            try {
+                await navigator.clipboard.writeText(message);
+                document.getElementById('assignmentWhatsAppMessageField').hidden = true;
+                servicesStatus.textContent = 'Mensaje copiado. Se abrió el chat de coordinación en WhatsApp; solo falta pegarlo si no aparece escrito y pulsar Enviar.';
+            } catch (error) {
+                console.error('No se pudo copiar el mensaje de asignaciones:', error);
+                document.getElementById('assignmentWhatsAppMessageField').hidden = false;
+                servicesStatus.textContent = 'Se abrió el chat de coordinación en WhatsApp. No se pudo copiar automáticamente; copia el mensaje mostrado y pégalo en el chat.';
             }
         });
 
