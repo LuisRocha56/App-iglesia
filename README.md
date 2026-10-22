@@ -1,6 +1,6 @@
 # Mi Iglesia
 
-El frontend son páginas HTML estáticas y puede publicarse en Vercel o servirse con Live Server. El API Express y PostgreSQL se ejecutan por separado.
+El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. El acceso público ofrece dos categorías: Miembros de alabanza y Congregación. Todas las cuentas nuevas comienzan con el rol Miembro; el perfil Master puede asignar los roles definidos en `backend/server.js`.
 
 ## Desarrollo local
 
@@ -15,24 +15,32 @@ El frontend son páginas HTML estáticas y puede publicarse en Vercel o servirse
    npm start
    ```
 
-5. Abre el `index.html` de la raíz con Live Server. La configuración inicial apunta al API en `http://localhost:3000`.
+5. Sirve la raíz del proyecto con Live Server. `api-config.js` contiene la URL pública actual del API; para desarrollo local, cámbiala temporalmente a `http://localhost:3000`.
 
-El API crea la tabla `users` al iniciar. Para proteger las cuentas, las contraseñas se guardan como hashes y no como texto plano.
-La base de datos PostgreSQL inicia vacía; las cuentas y contraseñas que existan en el SQL Server local no se migran automáticamente y deberán registrarse de nuevo.
+El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan su rol y reciben la categoría Congregación por defecto.
 
-## Publicar
+## Publicación
 
-### Render (API y PostgreSQL)
+### Render (API)
 
-1. Crea una base PostgreSQL en Render y un servicio **Web Service** conectado a este repositorio.
-2. Configura `backend` como **Root Directory**, `npm install` como comando de compilación y `npm start` como comando de inicio.
-3. Configura `DATABASE_URL` con la URL interna de la base de datos de Render, `JWT_SECRET` con un secreto aleatorio largo y `NODE_ENV=production`.
-4. Cuando Vercel proporcione el dominio del sitio, configúralo en `FRONTEND_ORIGIN` del servicio de Render. Para varios dominios, sepáralos con comas.
+Configura el servicio Web en la rama `main`:
 
-### Vercel (frontend estático)
+- **Root Directory:** `backend`
+- **Build Command:** `npm install`
+- **Start Command:** `npm start`
 
-1. Importa el mismo repositorio en Vercel con la raíz del proyecto como directorio; no se requiere comando de compilación. El sitio estático está en la raíz, separado del API.
-2. En `api-config.js`, reemplaza `http://localhost:3000` por la URL pública del Web Service de Render, sin una barra final.
-3. Publica o vuelve a desplegar el frontend.
+Agrega estas variables de entorno en el servicio:
 
-Después de desplegar, verifica `https://TU-API.onrender.com/api/health`. No publiques `.env` ni credenciales de la base de datos.
+- `DATABASE_URL`: connection string de PostgreSQL en Neon.
+- `JWT_SECRET`: secreto aleatorio largo.
+- `NODE_ENV`: `production`.
+- `FRONTEND_ORIGIN`: dominio exacto de Vercel, sin barra final.
+- `MASTER_EMAIL`: correo de la cuenta que debe recibir el rol Master. La cuenta debe estar registrada antes de activar esta variable. El backend promueve esa cuenta una sola vez; la marca de inicialización se guarda en `app_settings`.
+
+El rol Master autoriza las rutas administrativas en el servidor. Solo permite asignar roles a otras cuentas; el endpoint rechaza cambios al propio rol.
+
+### Vercel (frontend)
+
+Conecta la raíz del repositorio, deja el framework como `Other`, no configures comandos de compilación y usa la raíz `./`. `api-config.js` debe apuntar a la URL pública del API de Render. Al cambiar la URL, haz commit y push a `main` para que Vercel vuelva a desplegar.
+
+Verifica la API en `https://TU-API.onrender.com/api/health`. No publiques `.env`, connection strings ni secretos.

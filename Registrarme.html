@@ -116,14 +116,34 @@
         .agreement a {
             text-decoration: none;
             color: #0099ff;
-            font-size: 9px;
+            font-size: 12px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #31539b;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .category-label {
+            margin: 8px 0 0;
+            color: #b47b10;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-align: center;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <a class="back-link" href="index.html">← Volver a los apartados</a>
         <div class="heading">Registrarme</div>
+        <p class="category-label" id="categoryLabel"></p>
         
         <form class="form" id="loginForm">
             <input
@@ -157,12 +177,14 @@
                 required
                 minlength="8"
             />
+            <input id="category" type="hidden" value="congregation" />
             
             <!-- Etiqueta donde se muestran los errores de validación -->
             <p id="errorMessage" class="error-message"></p>
 
             <input value="Registrarse" type="submit" class="login-button" />
         </form>
+        <span class="agreement"><a id="loginLink" href="index.html">Ya tengo cuenta: iniciar sesión</a></span>
     </div>
 
     <!-- Lógica de validación con JavaScript -->
@@ -175,6 +197,14 @@ const telefonoInput = document.getElementById('numeroTel');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const errorMessage = document.getElementById('errorMessage');
+const params = new URLSearchParams(window.location.search);
+const group = params.get('grupo') === 'alabanza' ? 'alabanza' : 'congregacion';
+const category = group === 'alabanza' ? 'worship' : 'congregation';
+const groupName = group === 'alabanza' ? 'Miembros de alabanza' : 'Congregación';
+document.getElementById('category').value = category;
+document.getElementById('categoryLabel').textContent = groupName;
+document.getElementById('loginLink').href = `index.html?grupo=${encodeURIComponent(group)}&modo=login`;
+document.title = `Registrarme - ${groupName}`;
 
 loginForm.addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -183,7 +213,8 @@ loginForm.addEventListener('submit', async function(event) {
         nombre: nombreInput.value.trim(),
         telefono: telefonoInput.value.trim(),
         email: emailInput.value.trim(),
-        password: passwordInput.value.trim()
+        password: passwordInput.value,
+        category: category
     };
 
     if (!data.nombre || !data.telefono || !data.email || !data.password) {

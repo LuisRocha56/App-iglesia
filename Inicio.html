@@ -3,86 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Iglesia - Inicio</title>
+    <meta name="theme-color" content="#20366f">
+    <title>Inicio - Mi Iglesia</title>
     <style>
+        :root {
+            --navy: #20366f;
+            --blue: #31539b;
+            --gold: #e5b344;
+            --cream: #fbf8f2;
+            --ink: #24314a;
+            --muted: #727b8d;
+            --line: #eee8dc;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
+            background: var(--cream);
+            color: var(--ink);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #4289fa 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
         }
 
-        .welcome-card {
-            background: #ffffff;
-            width: 100%;
-            max-width: 400px;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            text-align: center;
+        .hero {
+            padding: 23px 22px 80px;
+            color: white;
+            background:
+                radial-gradient(circle at 89% 28%, rgba(255,255,255,.10) 0 100px, transparent 101px),
+                linear-gradient(135deg, #1c2f62, #31539b);
         }
+
+        .nav, main {
+            width: min(100%, 1040px);
+            margin: 0 auto;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            display: grid;
+            width: 42px;
+            height: 42px;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.3);
+            border-radius: 13px;
+            color: var(--gold);
+            font-size: 24px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-right span { color: rgba(255,255,255,.82); font-size: 13px; }
+
+        .logout {
+            min-height: 38px;
+            padding: 0 13px;
+            border: 1px solid rgba(255,255,255,.4);
+            border-radius: 10px;
+            background: transparent;
+            color: white;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .welcome {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 42px;
+        }
+
+        .welcome p {
+            margin: 0 0 8px;
+            color: #f2cb72;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; }
 
         h1 {
-            color: rgb(16, 137, 211);
-            margin-bottom: 10px;
+            margin: 0;
+            font-size: clamp(29px, 5vw, 43px);
         }
 
-        p {
-            color: #666;
-            margin-bottom: 25px;
+        .role-badge {
+            display: inline-block;
+            padding: 8px 13px;
+            border: 1px solid rgba(255,255,255,.3);
+            border-radius: 999px;
+            background: rgba(255,255,255,.1);
+            color: #fff3d1;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
-        .logout-btn {
-            background: #e74c3c;
+        main {
+            padding: 0 22px 56px;
+            margin-top: -48px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 13px;
+            margin-bottom: 22px;
+        }
+
+        .stat {
+            padding: 17px;
+            border: 1px solid rgba(255,255,255,.28);
+            border-radius: 17px;
+            background: #304e8c;
             color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
+            text-align: center;
+            box-shadow: 0 9px 24px rgba(20,39,83,.13);
         }
 
-        .logout-btn:hover {
-            background: #c0392b;
+        .stat strong {
+            display: block;
+            color: #f4c75d;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 25px;
+        }
+
+        .stat span { color: rgba(255,255,255,.84); font-size: 12px; }
+
+        .announcement {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 20px;
+            padding: 25px;
+            border-radius: 20px;
+            background: linear-gradient(120deg, #e3ad37, #f4c94d);
+            box-shadow: 0 13px 26px rgba(166,119,23,.17);
+        }
+
+        .announcement .tag {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.48);
+            color: var(--navy);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .announcement h2 {
+            margin: 12px 0 7px;
+            color: var(--navy);
+            font-size: 25px;
+        }
+
+        .announcement p { margin: 0; color: #4c432f; line-height: 1.5; }
+
+        .announcement-icon {
+            display: grid;
+            width: 64px;
+            height: 64px;
+            place-items: center;
+            border-radius: 19px;
+            background: rgba(255,255,255,.33);
+            color: var(--navy);
+            font-size: 31px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .panel {
+            padding: 22px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: white;
+            box-shadow: 0 8px 22px rgba(32,54,111,.06);
+        }
+
+        .panel h2 { margin: 0 0 8px; color: var(--navy); font-size: 21px; }
+        .panel p { margin: 0; color: var(--muted); line-height: 1.55; }
+        .panel .date { color: #b47b10; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+
+        .admin-panel { margin-top: 20px; }
+        .admin-heading { display:flex; align-items:start; justify-content:space-between; gap:16px; margin-bottom:16px; }
+        .admin-heading p { margin-top:5px; }
+        .status { min-height:20px; margin:10px 0; color:#31539b; font-size:13px; }
+        .user-list { display:grid; gap:10px; }
+        .user-row {
+            display:grid;
+            grid-template-columns: minmax(0, 1fr) 175px auto;
+            align-items:center;
+            gap:12px;
+            padding:12px;
+            border:1px solid #e9edf4;
+            border-radius:12px;
+        }
+        .user-name { color:var(--navy); font-weight:700; }
+        .user-meta { margin-top:3px; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
+        .role-select {
+            width:100%;
+            min-height:38px;
+            padding:6px 9px;
+            border:1px solid #d8deea;
+            border-radius:9px;
+            background:white;
+            color:var(--ink);
+            font:inherit;
+        }
+        .save-role {
+            min-height:38px;
+            padding:0 13px;
+            border:0;
+            border-radius:9px;
+            background:var(--navy);
+            color:white;
+            font-weight:700;
+            cursor:pointer;
+        }
+        .save-role:disabled { opacity:.55; cursor:not-allowed; }
+        [hidden] { display:none !important; }
+
+        @media (max-width: 650px) {
+            .hero { padding:18px 16px 69px; }
+            main { padding:0 14px 38px; }
+            .welcome { align-items:start; flex-direction:column; margin-top:32px; }
+            .stats { gap:8px; }
+            .stat { padding:13px 5px; }
+            .stat strong { font-size:21px; }
+            .stat span { font-size:10px; }
+            .announcement { padding:19px; }
+            .announcement-icon { width:48px; height:48px; font-size:24px; }
+            .content-grid { grid-template-columns:1fr; }
+            .user-row { grid-template-columns:1fr auto; }
+            .role-select { grid-column:1; }
+            .save-role { grid-column:2; grid-row:2; }
         }
     </style>
 </head>
 <body>
+    <header class="hero">
+        <nav class="nav">
+            <div class="brand"><span class="brand-icon" aria-hidden="true">✚</span><span>Mi Iglesia</span></div>
+            <div class="nav-right">
+                <span id="userName"></span>
+                <button class="logout" id="logoutBtn" type="button">Cerrar sesión</button>
+            </div>
+        </nav>
+        <section class="welcome">
+            <div>
+                <p id="categoryLabel">Bienvenido</p>
+                <h1>Hola, <span id="welcomeName">...</span></h1>
+            </div>
+            <span class="role-badge" id="roleBadge">Miembro</span>
+        </section>
+    </header>
 
-    <div class="welcome-card">
-        <h1>¡Bienvenido a Mi Iglesia!</h1>
-        <p id="welcomeMessage">Has iniciado sesión correctamente.</p>
-        
-        <button class="logout-btn" id="logoutBtn">Cerrar Sesión</button>
-    </div>
+    <main>
+        <section class="stats" aria-label="Resumen">
+            <div class="stat"><strong id="memberCount">—</strong><span>Cuentas registradas</span></div>
+            <div class="stat"><strong>✦</strong><span>Fe y comunidad</span></div>
+            <div class="stat"><strong>♡</strong><span>Unidos en oración</span></div>
+        </section>
+
+        <section class="announcement">
+            <div>
+                <span class="tag">Avisos de la comunidad</span>
+                <h2>Un espacio para crecer juntos</h2>
+                <p>Muy pronto podrás consultar aquí los anuncios y actividades de tu iglesia.</p>
+            </div>
+            <span class="announcement-icon" aria-hidden="true">✧</span>
+        </section>
+
+        <section class="content-grid">
+            <article class="panel">
+                <p class="date">Comunidad</p>
+                <h2>Próximos encuentros</h2>
+                <p>Consulta con tu equipo de coordinación para conocer los horarios y detalles de las próximas reuniones.</p>
+            </article>
+            <article class="panel">
+                <p class="date">Oración</p>
+                <h2>Cuenta con nosotros</h2>
+                <p>La comunidad está aquí para acompañarte. Comparte tus peticiones con las personas responsables de tu congregación.</p>
+            </article>
+        </section>
+
+        <section class="panel admin-panel" id="adminPanel" hidden>
+            <div class="admin-heading">
+                <div>
+                    <h2>Administrar roles</h2>
+                    <p>Asigna a cada persona el rol correspondiente. Las cuentas nuevas comienzan como Miembro.</p>
+                </div>
+            </div>
+            <p class="status" id="adminStatus" role="status"></p>
+            <div class="user-list" id="userList"></div>
+        </section>
+    </main>
 
     <script src="api-config.js"></script>
     <script src="app.js"></script>
     <script>
-        const logoutBtn = document.getElementById('logoutBtn');
-        const welcomeMessage = document.getElementById('welcomeMessage');
+        const roleLabels = {
+            1: 'Músico',
+            2: 'Coordinador',
+            3: 'Multimedia',
+            4: 'Sonido',
+            5: 'Master',
+            6: 'Miembro'
+        };
+        const roleOptions = [1, 2, 3, 4, 5, 6];
+        const userList = document.getElementById('userList');
+        const adminStatus = document.getElementById('adminStatus');
 
-        MiIglesia.request('/api/auth/me')
-            .then(({ user }) => {
-                welcomeMessage.textContent = `Has iniciado sesión correctamente, ${user.nombre}.`;
-            })
-            .catch(() => {
+        function addTextElement(parent, tag, className, text) {
+            const element = document.createElement(tag);
+            element.className = className;
+            element.textContent = text;
+            parent.appendChild(element);
+            return element;
+        }
+
+        async function loadUsers(currentUserId) {
+            const { users } = await MiIglesia.request('/api/admin/users');
+            userList.replaceChildren();
+
+            users.forEach((user) => {
+                const row = document.createElement('div');
+                row.className = 'user-row';
+                const identity = document.createElement('div');
+                addTextElement(identity, 'div', 'user-name', user.nombre);
+                addTextElement(identity, 'div', 'user-meta', `${user.email} · ${user.category === 'worship' ? 'Alabanza' : 'Congregación'}`);
+                row.appendChild(identity);
+
+                const select = document.createElement('select');
+                select.className = 'role-select';
+                select.setAttribute('aria-label', `Rol de ${user.nombre}`);
+                roleOptions.forEach((area) => {
+                    const option = document.createElement('option');
+                    option.value = String(area);
+                    option.textContent = roleLabels[area];
+                    option.selected = Number(user.area) === area;
+                    select.appendChild(option);
+                });
+                select.disabled = String(user.id) === String(currentUserId);
+                row.appendChild(select);
+
+                const saveButton = document.createElement('button');
+                saveButton.className = 'save-role';
+                saveButton.type = 'button';
+                saveButton.textContent = 'Guardar';
+                saveButton.disabled = select.disabled;
+                saveButton.addEventListener('click', async () => {
+                    saveButton.disabled = true;
+                    adminStatus.textContent = '';
+                    try {
+                        await MiIglesia.request(`/api/admin/users/${encodeURIComponent(user.id)}/role`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ area: Number(select.value) })
+                        });
+                        adminStatus.textContent = `Rol actualizado para ${user.nombre}.`;
+                    } catch (error) {
+                        adminStatus.textContent = error.message || 'No se pudo actualizar el rol.';
+                    } finally {
+                        saveButton.disabled = false;
+                    }
+                });
+                row.appendChild(saveButton);
+                userList.appendChild(row);
+            });
+        }
+
+        async function loadPage() {
+            try {
+                const { user } = await MiIglesia.request('/api/auth/me');
+                document.getElementById('welcomeName').textContent = user.nombre;
+                document.getElementById('userName').textContent = user.nombre;
+                document.getElementById('roleBadge').textContent = roleLabels[user.area] || 'Miembro';
+                document.getElementById('categoryLabel').textContent =
+                    user.category === 'worship' ? 'Miembros de alabanza' : 'Congregación';
+
+                const dashboard = await MiIglesia.request('/api/dashboard');
+                document.getElementById('memberCount').textContent = dashboard.memberCount;
+
+                if (Number(user.area) === 5) {
+                    document.getElementById('adminPanel').hidden = false;
+                    await loadUsers(user.id);
+                }
+            } catch (error) {
                 MiIglesia.clearToken();
                 window.location.replace('index.html');
-            });
+            }
+        }
 
-        logoutBtn.addEventListener('click', () => {
+        document.getElementById('logoutBtn').addEventListener('click', () => {
             MiIglesia.clearToken();
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         });
+
+        loadPage();
     </script>
 </body>
 </html>
