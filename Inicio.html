@@ -7,13 +7,13 @@
     <title>Inicio - Mi Iglesia</title>
     <style>
         :root {
-            --navy: #20366f;
-            --blue: #31539b;
-            --gold: #e5b344;
-            --cream: #fbf8f2;
-            --ink: #24314a;
-            --muted: #727b8d;
-            --line: #eee8dc;
+            --navy: #191919;
+            --blue: #29231f;
+            --gold: #ef6900;
+            --cream: #f5f1ec;
+            --ink: #26221f;
+            --muted: #77716c;
+            --line: #ebe4dc;
         }
 
         * { box-sizing: border-box; }
@@ -29,8 +29,9 @@
             padding: 23px 22px 80px;
             color: white;
             background:
-                radial-gradient(circle at 89% 28%, rgba(255,255,255,.10) 0 100px, transparent 101px),
-                linear-gradient(135deg, #1c2f62, #31539b);
+                radial-gradient(ellipse at 12% 110%, rgba(239,105,0,.72), transparent 31%),
+                radial-gradient(circle at 89% 28%, rgba(255,255,255,.08) 0 100px, transparent 101px),
+                linear-gradient(135deg, #101010, #29231f);
         }
 
         .nav, main {
@@ -134,7 +135,7 @@
             padding: 17px;
             border: 1px solid rgba(255,255,255,.28);
             border-radius: 17px;
-            background: #304e8c;
+            background: #26221f;
             color: white;
             text-align: center;
             box-shadow: 0 9px 24px rgba(20,39,83,.13);
@@ -156,8 +157,8 @@
             gap: 20px;
             padding: 25px;
             border-radius: 20px;
-            background: linear-gradient(120deg, #e3ad37, #f4c94d);
-            box-shadow: 0 13px 26px rgba(166,119,23,.17);
+            background: linear-gradient(120deg, #ed6a00, #ff9b28);
+            box-shadow: 0 13px 26px rgba(166,75,0,.17);
         }
 
         .announcement .tag {
@@ -178,7 +179,7 @@
             font-size: 25px;
         }
 
-        .announcement p { margin: 0; color: #4c432f; line-height: 1.5; }
+        .announcement p { margin: 0; color: #42270f; line-height: 1.5; }
 
         .announcement-icon {
             display: grid;
@@ -241,7 +242,7 @@
             padding:0 13px;
             border:0;
             border-radius:9px;
-            background:var(--navy);
+            background:var(--gold);
             color:white;
             font-weight:700;
             cursor:pointer;
@@ -367,6 +368,7 @@
                     const option = document.createElement('option');
                     option.value = String(area);
                     option.textContent = roleLabels[area];
+                    option.disabled = area === 5 && String(user.id) !== String(currentUserId);
                     option.selected = Number(user.area) === area;
                     select.appendChild(option);
                 });

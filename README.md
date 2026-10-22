@@ -1,6 +1,6 @@
 # Mi Iglesia
 
-El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. El acceso público ofrece dos categorías: Miembros de alabanza y Congregación. Todas las cuentas nuevas comienzan con el rol Miembro; el perfil Master puede asignar los roles definidos en `backend/server.js`.
+El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. La página inicial tiene una única pantalla adaptable de registro/inicio de sesión inspirada en la referencia visual. Las cuentas pueden elegir Congregación o Miembros de alabanza; todas comienzan con el rol Miembro. El perfil Master puede asignar Músico, Coordinador, Multimedia, Sonido o Miembro. Master es un rol único y no se asigna desde la administración normal.
 
 ## Desarrollo local
 
@@ -15,7 +15,7 @@ El frontend es estático y se publica en Vercel. La API Express corre en Render 
    npm start
    ```
 
-5. Sirve la raíz del proyecto con Live Server. `api-config.js` contiene la URL pública actual del API; para desarrollo local, cámbiala temporalmente a `http://localhost:3000`.
+5. Sirve la raíz del proyecto con Live Server. Para desarrollo local, cambia temporalmente la URL de API de `api-config.js` a `http://localhost:3000`.
 
 El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan su rol y reciben la categoría Congregación por defecto.
 
@@ -35,12 +35,12 @@ Agrega estas variables de entorno en el servicio:
 - `JWT_SECRET`: secreto aleatorio largo.
 - `NODE_ENV`: `production`.
 - `FRONTEND_ORIGIN`: dominio exacto de Vercel, sin barra final.
-- `MASTER_EMAIL`: correo de la cuenta que debe recibir el rol Master. La cuenta debe estar registrada antes de activar esta variable. El backend promueve esa cuenta una sola vez; la marca de inicialización se guarda en `app_settings`.
+- `MASTER_EMAIL`: correo de la cuenta que debe recibir el rol Master. La cuenta debe estar registrada antes de activar esta variable. El backend promueve esa cuenta una sola vez; la marca de inicialización se guarda en `app_settings`. No permite asignar Master a otras cuentas.
 
 El rol Master autoriza las rutas administrativas en el servidor. Solo permite asignar roles a otras cuentas; el endpoint rechaza cambios al propio rol.
 
 ### Vercel (frontend)
 
-Conecta la raíz del repositorio, deja el framework como `Other`, no configures comandos de compilación y usa la raíz `./`. `api-config.js` debe apuntar a la URL pública del API de Render. Al cambiar la URL, haz commit y push a `main` para que Vercel vuelva a desplegar.
+Conecta la raíz del repositorio, deja el framework como `Other`, no configures comandos de compilación y usa la raíz `./`. `api-config.js` apunta a la URL pública del API de Render. El archivo `Registrarme.html` redirige al formulario de registro unificado de `index.html`.
 
 Verifica la API en `https://TU-API.onrender.com/api/health`. No publiques `.env`, connection strings ni secretos.

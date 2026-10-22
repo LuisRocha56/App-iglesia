@@ -237,7 +237,7 @@ app.patch('/api/admin/users/:id/role', getAuthenticatedUser, requireMaster, asyn
     const userId = req.params.id;
     const area = Number(req.body?.area);
 
-    if (!/^[1-9]\d*$/.test(userId) || !Number.isInteger(area) || !roleNames[area]) {
+    if (!/^[1-9]\d*$/.test(userId) || !Number.isInteger(area) || !roleNames[area] || area === 5) {
         res.status(400).json({ success: false, message: 'Selecciona una cuenta y un rol válido.' });
         return;
     }
