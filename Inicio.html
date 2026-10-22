@@ -298,6 +298,17 @@
         .role-access ul { margin:10px 0 0; padding-left:20px; color:var(--muted); line-height:1.7; }
         .empty-state { color:var(--muted); font-size:14px; }
         .status { overflow-wrap:anywhere; }
+        .app-menu { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; padding:12px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+        .menu-link { min-height:38px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--navy); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+        .menu-link[aria-current="page"] { border-color:var(--blue); background:#edf3ff; color:var(--blue); }
+        .feed-list { display:grid; gap:10px; margin-top:12px; }
+        .feed-card { padding:14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+        .feed-card h3 { margin:0 0 6px; color:var(--navy); font-size:18px; }
+        .feed-meta { margin-top:7px; color:var(--muted); font-size:12px; }
+        .feed-card p { white-space:pre-wrap; }
+        .inline-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .text-link { color:var(--blue); font-weight:700; overflow-wrap:anywhere; }
+        .prayer-pending { border-left:4px solid #e6a700; }
         [hidden] { display:none !important; }
 
         @media (max-width: 650px) {
@@ -322,7 +333,7 @@
 <body>
     <header class="hero">
         <nav class="nav">
-            <div class="brand"><img class="brand-icon" src="src/images/Logo/LOGO_Blanco.png" alt=""><span>Mi Iglesia</span></div>
+            <div class="brand"><img class="brand-icon" src="src/images/Logo/LOGO_Blanco.png" alt=""><span id="appName">Mi Iglesia</span></div>
             <div class="nav-right">
                 <span id="userName"></span>
                 <button class="logout" id="logoutBtn" type="button">Cerrar sesión</button>
@@ -338,35 +349,46 @@
     </header>
 
     <main>
-        <section class="stats" aria-label="Resumen">
-            <div class="stat"><strong id="memberCount">—</strong><span>Cuentas registradas</span></div>
-            <div class="stat"><strong>✦</strong><span>Fe y comunidad</span></div>
-            <div class="stat"><strong>♡</strong><span>Unidos en oración</span></div>
-        </section>
+        <nav class="app-menu" id="appMenu" aria-label="Menú principal">
+            <button class="menu-link" type="button" data-view="home" aria-current="page">Inicio</button>
+            <button class="menu-link" type="button" data-view="services">Eventos y cultos</button>
+            <button class="menu-link" type="button" data-view="prayers">Peticiones de oración</button>
+            <button class="menu-link" type="button" data-view="profile">Mi perfil</button>
+            <button class="menu-link" type="button" data-view="coordination" hidden>Coordinación</button>
+            <button class="menu-link" type="button" data-view="songs" hidden>Repertorio</button>
+            <button class="menu-link" type="button" data-view="media" hidden>Multimedia</button>
+            <button class="menu-link" type="button" data-view="sound" hidden>Sonido</button>
+            <button class="menu-link" type="button" data-view="admin" hidden>Administración</button>
+        </nav>
 
-        <section class="announcement">
+        <section class="announcement" id="homePanel" data-view-section="home">
             <div>
                 <span class="tag">Avisos de la comunidad</span>
-                <h2>Un espacio para crecer juntos</h2>
-                <p>Muy pronto podrás consultar aquí los anuncios y actividades de tu iglesia.</p>
+                <h2>Anuncios</h2>
+                <div class="feed-list" id="announcementHomeList"></div>
             </div>
             <span class="announcement-icon" aria-hidden="true">✧</span>
         </section>
 
-        <section class="content-grid" id="communityPanel">
-            <article class="panel">
-                <p class="date">Comunidad</p>
-                <h2>Muro de avisos y calendario</h2>
-                <p>Consulta anuncios generales, horarios de servicios y actividades de la comunidad.</p>
-            </article>
-            <article class="panel">
-                <p class="date">Oración</p>
-                <h2>Peticiones de oración</h2>
-                <p>Este espacio corresponde a las peticiones y acompañamiento de la congregación.</p>
-            </article>
+        <section class="panel" id="homeEventsPanel" data-view-section="home">
+            <h2>Próximos eventos</h2>
+            <div class="service-list" id="homeServiceList"></div>
         </section>
 
-        <section class="panel role-access" id="profilePanel">
+        <section class="panel role-access" id="prayersPanel" data-view-section="prayers" hidden>
+            <h2>Peticiones de oración</h2>
+            <p>Las peticiones aparecen para la comunidad después de que Master o Coordinación las aprueben.</p>
+            <form class="form-grid" id="prayerForm">
+                <label class="form-field full">Tu petición
+                    <textarea name="body" minlength="4" maxlength="2000" required></textarea>
+                </label>
+                <button class="action-button" type="submit">Enviar para aprobación</button>
+            </form>
+            <p class="status" id="prayerStatus" role="status" aria-live="polite"></p>
+            <div class="feed-list" id="prayerList"></div>
+        </section>
+
+        <section class="panel role-access" id="profilePanel" data-view-section="profile" hidden>
             <h2>Mi perfil</h2>
             <p>Actualiza tus datos y cambia tu contraseña. Nadie más puede modificar tu perfil desde aquí.</p>
             <form id="profileForm" class="form-grid">
@@ -393,39 +415,95 @@
             <p class="status" id="profileStatus" role="status" aria-live="polite"></p>
         </section>
 
-        <section class="panel role-access" id="coordinatorPanel" hidden>
+        <section class="panel role-access" id="coordinatorPanel" data-view-section="coordination" hidden>
             <h2>Coordinación</h2>
-            <p>Gestiona cultos y eventos, programa los equipos, administra anuncios y peticiones, y consulta el directorio básico. La administración de roles permanece exclusiva de Master.</p>
+            <p>Administra anuncios, revisa peticiones de oración y consulta el directorio básico. Los permisos de usuarios son exclusivos de Master.</p>
+            <h3>Publicar un anuncio</h3>
+            <form class="form-grid" id="announcementForm">
+                <input name="announcementId" type="hidden">
+                <label class="form-field">Título
+                    <input name="title" maxlength="160" required>
+                </label>
+                <label class="form-field full">Contenido
+                    <textarea name="body" maxlength="4000" required></textarea>
+                </label>
+                <button class="action-button" type="submit">Publicar anuncio</button>
+                <button class="action-button" id="cancelAnnouncementEdit" type="button" hidden>Cancelar edición</button>
+            </form>
+            <p class="status" id="announcementStatus" role="status" aria-live="polite"></p>
+            <h3>Peticiones por aprobar</h3>
+            <div class="feed-list" id="pendingPrayerList"></div>
             <h3>Directorio de miembros</h3>
             <div class="directory-list" id="directoryList"></div>
         </section>
 
-        <section class="panel role-access" id="musicianPanel" hidden>
+        <section class="panel role-access" id="musicianPanel" data-view-section="songs" hidden>
             <h2>Repertorio y ensayos</h2>
-            <ul>
-                <li>Consulta repertorio, letras, acordes y partituras.</li>
-                <li>Revisa ensayos y programación de servicios.</li>
-                <li>Confirma asistencia a los cultos donde tienes asignación.</li>
-            </ul>
+            <p>Consulta letras, acordes y partituras. Las fechas de ensayos están en Eventos y cultos.</p>
+            <form class="form-grid" id="songForm" hidden>
+                <label class="form-field">Canción
+                    <input name="title" maxlength="160" required>
+                </label>
+                <label class="form-field">Artista
+                    <input name="artist" maxlength="160">
+                </label>
+                <label class="form-field full">Letra
+                    <textarea name="lyrics" maxlength="12000"></textarea>
+                </label>
+                <label class="form-field">Enlace de acordes
+                    <input name="chordsUrl" type="url" maxlength="1000">
+                </label>
+                <label class="form-field">Enlace de partitura
+                    <input name="sheetUrl" type="url" maxlength="1000">
+                </label>
+                <button class="action-button" type="submit">Agregar canción</button>
+            </form>
+            <p class="status" id="songStatus" role="status" aria-live="polite"></p>
+            <div class="feed-list" id="songList"></div>
         </section>
 
-        <section class="panel role-access" id="multimediaPanel" hidden>
+        <section class="panel role-access" id="multimediaPanel" data-view-section="media" hidden>
             <h2>Multimedia</h2>
-            <ul>
-                <li>Consulta anuncios para proyección y el programa del culto.</li>
-                <li>Accede al espacio de recursos visuales oficiales.</li>
-            </ul>
+            <p>Consulta anuncios, el cronograma de servicios y el banco de recursos visuales.</p>
+            <form class="form-grid" id="resourceForm" hidden>
+                <label class="form-field">Nombre
+                    <input name="title" maxlength="160" required>
+                </label>
+                <label class="form-field">Tipo de recurso
+                    <select name="category"><option>Imagen</option><option>Video</option><option>Logo</option><option>Banner</option><option>Otro</option></select>
+                </label>
+                <label class="form-field full">Enlace de Drive
+                    <input name="url" type="url" maxlength="1000" placeholder="https://drive.google.com/drive/folders/REEMPLAZA_CON_ID_DE_CARPETA" required>
+                </label>
+                <label class="form-field full">Descripción
+                    <input name="description" maxlength="500">
+                </label>
+                <button class="action-button" type="submit">Agregar enlace</button>
+            </form>
+            <p class="status" id="resourceStatus" role="status" aria-live="polite"></p>
+            <div class="feed-list" id="resourceList"></div>
         </section>
 
-        <section class="panel role-access" id="soundPanel" hidden>
-            <h2>Sonido</h2>
-            <ul>
-                <li>Consulta la configuración de monitores por músico y las notas técnicas.</li>
-                <li>Revisa las asignaciones de sonido local y transmisión.</li>
-            </ul>
+        <section class="panel role-access" id="soundPanel" data-view-section="sound" hidden>
+            <h2>Sonido y monitores</h2>
+            <p>Configuraciones de monitores in-ear o de piso por músico.</p>
+            <form class="form-grid" id="monitorForm">
+                <label class="form-field">Músico
+                    <input name="musicianName" maxlength="150" required>
+                </label>
+                <label class="form-field">Monitor
+                    <select name="monitorType"><option>In-ear</option><option>Piso</option></select>
+                </label>
+                <label class="form-field full">Notas técnicas
+                    <textarea name="notes" maxlength="2000" required></textarea>
+                </label>
+                <button class="action-button" type="submit">Guardar configuración</button>
+            </form>
+            <p class="status" id="soundStatus" role="status" aria-live="polite"></p>
+            <div class="feed-list" id="monitorList"></div>
         </section>
 
-        <section class="panel role-access" id="servicesPanel">
+        <section class="panel role-access" id="servicesPanel" data-view-section="services" hidden>
             <h2>Cultos, ensayos y eventos</h2>
             <p>Consulta fechas y equipos programados. Las asignaciones de Dirección pueden combinarse con cualquier otro puesto.</p>
             <p class="status" id="servicesStatus" role="status" aria-live="polite"></p>
@@ -473,20 +551,56 @@
             <div class="service-list" id="serviceList"></div>
         </section>
 
-        <section class="panel role-access" id="masterPanel" hidden>
+        <section class="panel role-access" id="masterPanel" data-view-section="admin" hidden>
             <h2>Administración general</h2>
-            <p>Master puede administrar roles, consultar auditorías y verificar el estado técnico sin exponer credenciales ni secretos de conexión.</p>
+            <p>Master puede administrar usuarios y roles, consultar auditorías y verificar la conexión técnica. Las credenciales y secretos de conexión nunca se muestran en la aplicación.</p>
+            <h3>Configuración global</h3>
+            <form class="form-grid" id="systemSettingsForm">
+                <label class="form-field">Nombre de la iglesia
+                    <input name="churchName" maxlength="120" required>
+                </label>
+                <button class="action-button" type="submit">Guardar configuración</button>
+            </form>
+            <p class="status" id="settingsStatus" role="status" aria-live="polite"></p>
+            <h3>Estado técnico</h3>
+            <p class="status" id="systemStatus" role="status" aria-live="polite">Verificando el API y la base de datos…</p>
             <h3>Registro de auditoría</h3>
             <div class="audit-list" id="auditList"></div>
         </section>
 
-        <section class="panel admin-panel" id="adminPanel" hidden>
+        <section class="panel admin-panel" id="adminPanel" data-view-section="admin" hidden>
             <div class="admin-heading">
                 <div>
                     <h2>Administrar roles</h2>
                     <p>Asigna uno o varios roles a cada persona. Las cuentas nuevas comienzan como Miembro.</p>
                 </div>
             </div>
+            <form class="panel" id="createUserForm">
+                <h3>Crear usuario</h3>
+                <div class="form-grid">
+                    <label class="form-field">Nombre
+                        <input name="nombre" maxlength="150" required>
+                    </label>
+                    <label class="form-field">Teléfono
+                        <input name="telefono" type="tel" maxlength="30" required>
+                    </label>
+                    <label class="form-field">Correo
+                        <input name="email" type="email" maxlength="255" required>
+                    </label>
+                    <label class="form-field">Contraseña inicial
+                        <input name="password" type="password" minlength="8" maxlength="72" required>
+                    </label>
+                    <fieldset class="role-options form-field full">
+                        <legend>Roles iniciales</legend>
+                        <label class="role-option"><input type="checkbox" name="areas" value="1">Músico</label>
+                        <label class="role-option"><input type="checkbox" name="areas" value="2">Coordinador</label>
+                        <label class="role-option"><input type="checkbox" name="areas" value="3">Multimedia</label>
+                        <label class="role-option"><input type="checkbox" name="areas" value="4">Sonido</label>
+                        <label class="role-option"><input type="checkbox" name="areas" value="6" checked>Miembro</label>
+                    </fieldset>
+                    <button class="action-button" type="submit">Crear cuenta</button>
+                </div>
+            </form>
             <p class="status" id="adminStatus" role="status"></p>
             <div class="user-list" id="userList"></div>
         </section>
@@ -523,7 +637,10 @@
         let currentServices = [];
         let directoryUsers = [];
         let canManageServices = false;
+        let canManageCommunity = false;
+        let canSeeTeam = false;
         let currentUserId = '';
+        let currentUserAreas = [];
         const positionSelect = document.querySelector('#assignmentForm [name="position"]');
         Object.keys(positionRoles).forEach((position) => {
             const option = document.createElement('option');
@@ -539,6 +656,22 @@
             parent.appendChild(element);
             return element;
         }
+
+        function setActiveView(view) {
+            document.querySelectorAll('[data-view-section]').forEach((section) => {
+                section.hidden = section.dataset.viewSection !== view;
+            });
+            document.querySelectorAll('.menu-link').forEach((button) => {
+                if (button.dataset.view === view) button.setAttribute('aria-current', 'page');
+                else button.removeAttribute('aria-current');
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.getElementById('appMenu').addEventListener('click', (event) => {
+            const button = event.target.closest('[data-view]');
+            if (button && !button.hidden) setActiveView(button.dataset.view);
+        });
 
         async function loadUsers(currentUserId) {
             const { users } = await MiIglesia.request('/api/admin/users');
@@ -598,6 +731,40 @@
                     }
                 });
                 row.appendChild(saveButton);
+                if (String(user.id) !== String(currentUserId)) {
+                    const credentials = document.createElement('div');
+                    credentials.className = 'inline-actions';
+                    const passwordInput = document.createElement('input');
+                    passwordInput.type = 'password';
+                    passwordInput.minLength = 8;
+                    passwordInput.maxLength = 72;
+                    passwordInput.autocomplete = 'new-password';
+                    passwordInput.placeholder = 'Nueva contraseña';
+                    passwordInput.setAttribute('aria-label', `Nueva contraseña para ${user.nombre}`);
+                    credentials.appendChild(passwordInput);
+                    const resetButton = addTextElement(credentials, 'button', 'save-role', 'Restablecer acceso');
+                    resetButton.type = 'button';
+                    resetButton.addEventListener('click', async () => {
+                        if (passwordInput.value.length < 8) {
+                            adminStatus.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+                            return;
+                        }
+                        resetButton.disabled = true;
+                        try {
+                            await MiIglesia.request(`/api/admin/users/${encodeURIComponent(user.id)}/password`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({ password: passwordInput.value })
+                            });
+                            passwordInput.value = '';
+                            adminStatus.textContent = `Se restablecieron las credenciales de ${user.nombre}.`;
+                        } catch (error) {
+                            adminStatus.textContent = error.message;
+                        } finally {
+                            resetButton.disabled = false;
+                        }
+                    });
+                    row.appendChild(credentials);
+                }
                 userList.appendChild(row);
             });
         }
@@ -632,6 +799,78 @@
                 option.value = '';
                 option.textContent = 'No hay personas con ese rol';
                 userSelect.appendChild(option);
+            }
+        }
+
+        function addAttendanceButton(parent, service, assignment) {
+            if (String(assignment.userId) !== currentUserId) return;
+            const dateParts = (date) => new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Mexico_City',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(date);
+            const startsAt = new Date(service.starts_at);
+            if (dateParts(startsAt) !== dateParts(new Date()) || startsAt > new Date()) return;
+
+            const button = document.createElement('button');
+            button.className = 'action-button';
+            button.type = 'button';
+            button.textContent = assignment.attendance === true
+                ? 'Asistencia confirmada'
+                : assignment.attendance === false ? 'Marcar que no asistí' : 'Confirmar asistencia';
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                const attended = assignment.attendance !== true;
+                try {
+                    await MiIglesia.request(`/api/services/${encodeURIComponent(service.id)}/attendance`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ attended })
+                    });
+                    await loadServices();
+                } catch (error) {
+                    servicesStatus.textContent = error.message || 'No se pudo guardar la asistencia.';
+                    button.disabled = false;
+                }
+            });
+            parent.appendChild(button);
+        }
+
+        function renderHomeServices() {
+            const list = document.getElementById('homeServiceList');
+            list.replaceChildren();
+            currentServices.forEach((service) => {
+                const card = document.createElement('article');
+                card.className = 'service-card';
+                addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
+                addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
+                if (service.details) addTextElement(card, 'p', 'service-details', service.details);
+                if (canSeeTeam && service.assignments.length) {
+                    const assignments = document.createElement('div');
+                    assignments.className = 'assignment-list';
+                    service.assignments.forEach((assignment) => {
+                        const chip = addTextElement(
+                            assignments,
+                            'span',
+                            'assignment-chip',
+                            `${assignment.position}: ${assignment.name}`
+                        );
+                        if (assignment.attendance !== null) {
+                            addTextElement(
+                                chip,
+                                'small',
+                                'feed-meta',
+                                assignment.attendance ? 'Asistió' : 'No asistió'
+                            );
+                        }
+                        addAttendanceButton(chip, service, assignment);
+                    });
+                    card.appendChild(assignments);
+                }
+                list.appendChild(card);
+            });
+            if (!currentServices.length) {
+                addTextElement(list, 'p', 'empty-state', 'Aún no hay próximos eventos programados.');
             }
         }
 
@@ -693,44 +932,56 @@
                     actions.appendChild(deleteButton);
                     card.appendChild(actions);
                 }
-                const assignments = document.createElement('div');
-                assignments.className = 'assignment-list';
-                service.assignments.forEach((assignment) => {
-                    const chip = document.createElement('span');
-                    chip.className = 'assignment-chip';
-                    chip.appendChild(document.createTextNode(`${assignment.position}: ${assignment.name}`));
-                    if (canManageServices) {
-                        const remove = document.createElement('button');
-                        remove.className = 'remove-assignment';
-                        remove.type = 'button';
-                        remove.textContent = 'Quitar';
-                        remove.setAttribute('aria-label', `Quitar ${assignment.position} de ${assignment.name}`);
-                        remove.addEventListener('click', async () => {
-                            try {
-                                await MiIglesia.request(
-                                    `/api/services/${encodeURIComponent(service.id)}/assignments/${encodeURIComponent(assignment.id)}`,
-                                    { method: 'DELETE' }
-                                );
-                                await loadServices();
-                                servicesStatus.textContent = 'Se quitó la asignación.';
-                            } catch (error) {
-                                servicesStatus.textContent = error.message;
-                            }
-                        });
-                        chip.appendChild(remove);
+                if (canSeeTeam) {
+                    const assignments = document.createElement('div');
+                    assignments.className = 'assignment-list';
+                    service.assignments.forEach((assignment) => {
+                        const chip = document.createElement('span');
+                        chip.className = 'assignment-chip';
+                        chip.appendChild(document.createTextNode(`${assignment.position}: ${assignment.name}`));
+                        if (assignment.attendance !== null) {
+                            addTextElement(
+                                chip,
+                                'small',
+                                'feed-meta',
+                                assignment.attendance ? 'Asistió' : 'No asistió'
+                            );
+                        }
+                        addAttendanceButton(chip, service, assignment);
+                        if (canManageServices) {
+                            const remove = document.createElement('button');
+                            remove.className = 'remove-assignment';
+                            remove.type = 'button';
+                            remove.textContent = 'Quitar';
+                            remove.setAttribute('aria-label', `Quitar ${assignment.position} de ${assignment.name}`);
+                            remove.addEventListener('click', async () => {
+                                try {
+                                    await MiIglesia.request(
+                                        `/api/services/${encodeURIComponent(service.id)}/assignments/${encodeURIComponent(assignment.id)}`,
+                                        { method: 'DELETE' }
+                                    );
+                                    await loadServices();
+                                    servicesStatus.textContent = 'Se quitó la asignación.';
+                                } catch (error) {
+                                    servicesStatus.textContent = error.message;
+                                }
+                            });
+                            chip.appendChild(remove);
+                        }
+                        assignments.appendChild(chip);
+                    });
+                    if (!service.assignments.length) {
+                        addTextElement(assignments, 'span', 'empty-state', 'Equipo por asignar');
                     }
-                    assignments.appendChild(chip);
-                });
-                if (!service.assignments.length) {
-                    addTextElement(assignments, 'span', 'empty-state', 'Equipo por asignar');
+                    card.appendChild(assignments);
                 }
-                card.appendChild(assignments);
                 serviceList.appendChild(card);
             });
 
             if (!currentServices.length) {
                 addTextElement(serviceList, 'p', 'empty-state', 'Aún no hay cultos o eventos programados.');
             }
+            renderHomeServices();
             refreshAssignmentOptions();
         }
 
@@ -767,6 +1018,216 @@
                 auditList.appendChild(row);
             });
             if (!logs.length) addTextElement(auditList, 'p', 'empty-state', 'Aún no hay acciones registradas.');
+        }
+
+        async function loadSystemStatus() {
+            const status = document.getElementById('systemStatus');
+            try {
+                const result = await MiIglesia.request('/api/admin/system-status');
+                status.textContent = `API: conectado · Base de datos: conectada · Verificado ${formatServiceDate(result.checkedAt)}.`;
+            } catch (error) {
+                status.textContent = `No se pudo verificar el estado técnico: ${error.message}`;
+                throw error;
+            }
+        }
+
+        async function loadSystemSettings() {
+            const { churchName } = await MiIglesia.request('/api/admin/settings');
+            document.querySelector('#systemSettingsForm [name="churchName"]').value = churchName;
+            document.getElementById('appName').textContent = churchName;
+        }
+
+        async function loadAnnouncements() {
+            const { announcements } = await MiIglesia.request('/api/announcements');
+            const list = document.getElementById('announcementHomeList');
+            list.replaceChildren();
+            announcements.forEach((announcement) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card';
+                addTextElement(card, 'h3', '', announcement.title);
+                addTextElement(card, 'p', '', announcement.body);
+                addTextElement(card, 'div', 'feed-meta', formatServiceDate(announcement.created_at));
+                if (canManageCommunity) {
+                    const actions = document.createElement('div');
+                    actions.className = 'inline-actions';
+                    const edit = addTextElement(actions, 'button', 'action-button', 'Editar anuncio');
+                    edit.type = 'button';
+                    edit.addEventListener('click', () => {
+                        setActiveView('coordination');
+                        const form = document.getElementById('announcementForm');
+                        form.elements.announcementId.value = String(announcement.id);
+                        form.elements.title.value = announcement.title;
+                        form.elements.body.value = announcement.body;
+                        form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
+                        document.getElementById('cancelAnnouncementEdit').hidden = false;
+                    });
+                    const remove = addTextElement(actions, 'button', 'remove-assignment', 'Eliminar anuncio');
+                    remove.type = 'button';
+                    remove.addEventListener('click', async () => {
+                        try {
+                            await MiIglesia.request(`/api/announcements/${encodeURIComponent(announcement.id)}`, { method: 'DELETE' });
+                            await loadAnnouncements();
+                        } catch (error) {
+                            document.getElementById('announcementStatus').textContent = error.message;
+                        }
+                    });
+                    card.appendChild(actions);
+                }
+                list.appendChild(card);
+            });
+            if (!announcements.length) {
+                addTextElement(list, 'p', 'empty-state', 'Todavía no hay anuncios publicados.');
+            }
+        }
+
+        async function loadPrayers() {
+            const { prayers } = await MiIglesia.request('/api/prayers');
+            const prayerList = document.getElementById('prayerList');
+            const pendingList = document.getElementById('pendingPrayerList');
+            prayerList.replaceChildren();
+            if (pendingList) pendingList.replaceChildren();
+            prayers.forEach((prayer) => {
+                const card = document.createElement('article');
+                card.className = `feed-card${prayer.status === 'pending' ? ' prayer-pending' : ''}`;
+                addTextElement(card, 'p', '', prayer.body);
+                const prayerState = prayer.status === 'pending'
+                    ? 'Pendiente de aprobación'
+                    : prayer.status === 'rejected'
+                        ? 'No aprobada'
+                        : `${prayer.support_count} personas acompañan`;
+                addTextElement(card, 'div', 'feed-meta',
+                    `${prayer.author_name} · ${formatServiceDate(prayer.created_at)} · ${prayerState}`);
+                if (prayer.status === 'approved') {
+                    const support = addTextElement(card, 'button', 'action-button',
+                        prayer.supported ? 'Dejar de acompañar' : 'Unirme en oración');
+                    support.type = 'button';
+                    support.addEventListener('click', async () => {
+                        try {
+                            await MiIglesia.request(`/api/prayers/${encodeURIComponent(prayer.id)}/support`, {
+                                method: prayer.supported ? 'DELETE' : 'POST'
+                            });
+                            await loadPrayers();
+                        } catch (error) {
+                            document.getElementById('prayerStatus').textContent = error.message;
+                        }
+                    });
+                }
+                prayerList.appendChild(card);
+
+                if (canManageCommunity && prayer.status === 'pending') {
+                    const pendingCard = card.cloneNode(true);
+                    pendingCard.querySelector('.feed-meta').textContent =
+                        `${prayer.author_name} · ${formatServiceDate(prayer.created_at)} · Pendiente`;
+                    const actions = document.createElement('div');
+                    actions.className = 'inline-actions';
+                    for (const [status, label] of [['approved', 'Aprobar'], ['rejected', 'Rechazar']]) {
+                        const button = addTextElement(actions, 'button', 'action-button', label);
+                        button.type = 'button';
+                        button.addEventListener('click', async () => {
+                            try {
+                                await MiIglesia.request(`/api/prayers/${encodeURIComponent(prayer.id)}/moderation`, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify({ status })
+                                });
+                                await loadPrayers();
+                            } catch (error) {
+                                document.getElementById('prayerStatus').textContent = error.message;
+                            }
+                        });
+                    }
+                    pendingCard.appendChild(actions);
+                    pendingList.appendChild(pendingCard);
+                }
+            });
+            if (!prayers.some((prayer) => prayer.status === 'approved' || String(prayer.author_id) === currentUserId)) {
+                addTextElement(prayerList, 'p', 'empty-state', 'Todavía no hay peticiones aprobadas.');
+            }
+            if (pendingList && !prayers.some((prayer) => prayer.status === 'pending')) {
+                addTextElement(pendingList, 'p', 'empty-state', 'No hay peticiones pendientes de aprobación.');
+            }
+        }
+
+        function addExternalLink(parent, label, url) {
+            if (!url) return;
+            const link = addTextElement(parent, 'a', 'text-link', label);
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+        }
+
+        async function loadSongs() {
+            const { songs } = await MiIglesia.request('/api/songs');
+            const list = document.getElementById('songList');
+            list.replaceChildren();
+            songs.forEach((song) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card';
+                addTextElement(card, 'h3', '', song.title);
+                if (song.artist) addTextElement(card, 'div', 'feed-meta', song.artist);
+                if (song.lyrics) addTextElement(card, 'p', '', song.lyrics);
+                const links = document.createElement('div');
+                links.className = 'inline-actions';
+                addExternalLink(links, 'Acordes', song.chords_url);
+                addExternalLink(links, 'Partitura', song.sheet_url);
+                card.appendChild(links);
+                if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) {
+                    const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar canción');
+                    remove.type = 'button';
+                    remove.addEventListener('click', async () => {
+                        try {
+                            await MiIglesia.request(`/api/songs/${encodeURIComponent(song.id)}`, { method: 'DELETE' });
+                            await loadSongs();
+                        } catch (error) {
+                            document.getElementById('songStatus').textContent = error.message;
+                        }
+                    });
+                }
+                list.appendChild(card);
+            });
+            if (!songs.length) addTextElement(list, 'p', 'empty-state', 'El repertorio está vacío.');
+        }
+
+        async function loadResources() {
+            const { resources } = await MiIglesia.request('/api/resources');
+            const list = document.getElementById('resourceList');
+            list.replaceChildren();
+            resources.forEach((resource) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card';
+                addTextElement(card, 'h3', '', resource.title);
+                addTextElement(card, 'div', 'feed-meta', resource.category);
+                if (resource.description) addTextElement(card, 'p', '', resource.description);
+                addExternalLink(card, 'Abrir recurso', resource.url);
+                if (currentUserAreas.some((area) => [2, 3, 5].includes(area))) {
+                    const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar enlace');
+                    remove.type = 'button';
+                    remove.addEventListener('click', async () => {
+                        try {
+                            await MiIglesia.request(`/api/resources/${encodeURIComponent(resource.id)}`, { method: 'DELETE' });
+                            await loadResources();
+                        } catch (error) {
+                            document.getElementById('resourceStatus').textContent = error.message;
+                        }
+                    });
+                }
+                list.appendChild(card);
+            });
+            if (!resources.length) addTextElement(list, 'p', 'empty-state', 'Agrega enlaces a los recursos compartidos de Drive.');
+        }
+
+        async function loadMonitorNotes() {
+            const { notes } = await MiIglesia.request('/api/monitor-notes');
+            const list = document.getElementById('monitorList');
+            list.replaceChildren();
+            notes.forEach((note) => {
+                const card = document.createElement('article');
+                card.className = 'feed-card';
+                addTextElement(card, 'h3', '', `${note.musician_name} · ${note.monitor_type}`);
+                addTextElement(card, 'p', '', note.notes);
+                addTextElement(card, 'div', 'feed-meta', `Actualizado ${formatServiceDate(note.updated_at)}`);
+                list.appendChild(card);
+            });
+            if (!notes.length) addTextElement(list, 'p', 'empty-state', 'Aún no hay configuraciones guardadas.');
         }
 
         document.getElementById('serviceForm').addEventListener('submit', async (event) => {
@@ -835,6 +1296,193 @@
             document.getElementById('cancelServiceEdit').hidden = true;
         });
 
+        document.getElementById('createUserForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const areas = data.getAll('areas').map(Number);
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/admin/users', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        nombre: data.get('nombre'),
+                        telefono: data.get('telefono'),
+                        email: data.get('email'),
+                        password: data.get('password'),
+                        areas
+                    })
+                });
+                form.reset();
+                form.querySelector('[name="areas"][value="6"]').checked = true;
+                adminStatus.textContent = 'Usuario creado.';
+                await loadUsers(currentUserId);
+            } catch (error) {
+                adminStatus.textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('systemSettingsForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                const { churchName } = await MiIglesia.request('/api/admin/settings', {
+                    method: 'PUT',
+                    body: JSON.stringify({ churchName: new FormData(form).get('churchName') })
+                });
+                document.getElementById('appName').textContent = churchName;
+                document.getElementById('settingsStatus').textContent = 'Configuración global guardada.';
+            } catch (error) {
+                document.getElementById('settingsStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('announcementForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const announcementId = String(data.get('announcementId') || '');
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request(
+                    announcementId
+                        ? `/api/announcements/${encodeURIComponent(announcementId)}`
+                        : '/api/announcements',
+                    {
+                    method: announcementId ? 'PATCH' : 'POST',
+                    body: JSON.stringify({
+                        title: data.get('title'),
+                        body: data.get('body')
+                    })
+                    }
+                );
+                form.reset();
+                button.textContent = 'Publicar anuncio';
+                document.getElementById('cancelAnnouncementEdit').hidden = true;
+                document.getElementById('announcementStatus').textContent =
+                    announcementId ? 'Anuncio actualizado.' : 'Anuncio publicado.';
+                await loadAnnouncements();
+            } catch (error) {
+                document.getElementById('announcementStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('cancelAnnouncementEdit').addEventListener('click', () => {
+            const form = document.getElementById('announcementForm');
+            form.reset();
+            form.querySelector('button[type="submit"]').textContent = 'Publicar anuncio';
+            document.getElementById('cancelAnnouncementEdit').hidden = true;
+        });
+
+        document.getElementById('prayerForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/prayers', {
+                    method: 'POST',
+                    body: JSON.stringify({ body: new FormData(form).get('body') })
+                });
+                form.reset();
+                document.getElementById('prayerStatus').textContent =
+                    'Petición enviada. Se publicará cuando la apruebe Master o Coordinación.';
+                await loadPrayers();
+            } catch (error) {
+                document.getElementById('prayerStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('songForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/songs', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: data.get('title'),
+                        artist: data.get('artist'),
+                        lyrics: data.get('lyrics'),
+                        chordsUrl: data.get('chordsUrl'),
+                        sheetUrl: data.get('sheetUrl')
+                    })
+                });
+                form.reset();
+                document.getElementById('songStatus').textContent = 'Canción agregada al repertorio.';
+                await loadSongs();
+            } catch (error) {
+                document.getElementById('songStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('resourceForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/resources', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: data.get('title'),
+                        category: data.get('category'),
+                        url: data.get('url'),
+                        description: data.get('description')
+                    })
+                });
+                form.reset();
+                document.getElementById('resourceStatus').textContent = 'Enlace agregado al banco de recursos.';
+                await loadResources();
+            } catch (error) {
+                document.getElementById('resourceStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('monitorForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await MiIglesia.request('/api/monitor-notes', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        musicianName: data.get('musicianName'),
+                        monitorType: data.get('monitorType'),
+                        notes: data.get('notes')
+                    })
+                });
+                form.reset();
+                document.getElementById('soundStatus').textContent = 'Configuración de monitor guardada.';
+                await loadMonitorNotes();
+            } catch (error) {
+                document.getElementById('soundStatus').textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
         document.getElementById('profileForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const form = event.currentTarget;
@@ -852,6 +1500,7 @@
                 });
                 document.getElementById('welcomeName').textContent = user.nombre;
                 document.getElementById('userName').textContent = user.nombre;
+                document.getElementById('appName').textContent = user.church_name || 'Mi Iglesia';
                 document.getElementById('profileStatus').textContent = 'Datos del perfil actualizados.';
             } catch (error) {
                 document.getElementById('profileStatus').textContent = error.message;
@@ -901,10 +1550,13 @@
             document.getElementById('welcomeName').textContent = user.nombre;
             document.getElementById('userName').textContent = user.nombre;
             const areas = getUserAreas(user);
+            currentUserAreas = areas;
             currentUserId = String(user.id);
             const isMaster = areas.includes(5);
             const isCoordinator = areas.includes(2);
             canManageServices = isMaster || isCoordinator;
+            canManageCommunity = canManageServices;
+            canSeeTeam = areas.some((area) => [1, 2, 3, 4, 5].includes(area));
             document.getElementById('roleBadge').textContent =
                 areas.map((area) => roleLabels[area]).filter(Boolean).join(' · ') || 'Miembro';
             document.getElementById('categoryLabel').textContent =
@@ -914,29 +1566,52 @@
             profileForm.elements.telefono.value = user.telefono || '';
             profileForm.elements.email.value = user.email || '';
 
-            for (const [area, panelId] of [
-                [2, 'coordinatorPanel'],
-                [1, 'musicianPanel'],
-                [3, 'multimediaPanel'],
-                [4, 'soundPanel']
-            ]) {
-                document.getElementById(panelId).hidden = !isMaster && !areas.includes(area);
-            }
+            const menuViews = {
+                coordination: canManageServices,
+                songs: areas.some((area) => [1, 2, 5].includes(area)),
+                media: areas.some((area) => [2, 3, 5].includes(area)),
+                sound: areas.some((area) => [2, 4, 5].includes(area)),
+                admin: isMaster
+            };
+            Object.entries(menuViews).forEach(([view, visible]) => {
+                document.querySelector(`[data-view="${view}"]`).hidden = !visible;
+            });
+            document.getElementById('coordinatorPanel').hidden = !canManageServices;
+            document.getElementById('musicianPanel').hidden = !menuViews.songs;
+            document.getElementById('multimediaPanel').hidden = !menuViews.media;
+            document.getElementById('soundPanel').hidden = !menuViews.sound;
+            document.getElementById('songForm').hidden = !areas.some((area) => [1, 2, 5].includes(area));
+            document.getElementById('resourceForm').hidden = !areas.some((area) => [2, 3, 5].includes(area));
+            document.getElementById('monitorForm').hidden = !areas.some((area) => [2, 4, 5].includes(area));
             document.getElementById('serviceManagement').hidden = !canManageServices;
             document.getElementById('adminPanel').hidden = !isMaster;
             document.getElementById('masterPanel').hidden = !isMaster;
+            setActiveView('home');
 
-            try {
-                const dashboard = await MiIglesia.request('/api/dashboard');
-                document.getElementById('memberCount').textContent = dashboard.memberCount;
-                await loadServices();
-                if (canManageServices) await loadDirectory();
-                if (isMaster) {
-                    await Promise.all([loadUsers(user.id), loadAuditLogs()]);
-                }
-            } catch (error) {
-                servicesStatus.textContent = error.message || 'No se pudo cargar el contenido.';
+            const requests = [
+                [loadServices(), 'servicesStatus'],
+                [loadAnnouncements(), 'announcementStatus'],
+                [loadPrayers(), 'prayerStatus']
+            ];
+            if (areas.some((area) => [1, 2, 5].includes(area))) requests.push([loadSongs(), 'songStatus']);
+            if (areas.some((area) => [2, 3, 5].includes(area))) requests.push([loadResources(), 'resourceStatus']);
+            if (areas.some((area) => [2, 4, 5].includes(area))) requests.push([loadMonitorNotes(), 'soundStatus']);
+            if (canManageServices) requests.push([loadDirectory(), 'servicesStatus']);
+            if (isMaster) {
+                requests.push(
+                    [loadUsers(user.id), 'adminStatus'],
+                    [loadAuditLogs(), 'adminStatus'],
+                    [loadSystemStatus(), 'systemStatus'],
+                    [loadSystemSettings(), 'settingsStatus']
+                );
             }
+            const results = await Promise.allSettled(requests.map(([request]) => request));
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    document.getElementById(requests[index][1]).textContent =
+                        result.reason.message || 'No se pudo cargar esta sección.';
+                }
+            });
         }
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
