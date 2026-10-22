@@ -107,19 +107,18 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.post('/api/register', async (req, res, next) => {
-    const { nombre, telefono, email, password, category } = req.body || {};
+    const { nombre, telefono, email, password } = req.body || {};
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-    const normalizedCategory = category === 'worship' ? 'worship' : category === 'congregation' ? 'congregation' : '';
+    const normalizedCategory = 'congregation';
 
     if (typeof nombre !== 'string' || nombre.trim().length < 2 || nombre.trim().length > 150
         || typeof telefono !== 'string' || telefono.trim().length < 7 || telefono.trim().length > 30
         || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
         || normalizedEmail.length > 255
-        || !normalizedCategory
         || typeof password !== 'string' || password.length < 8 || password.length > 72) {
         res.status(400).json({
             success: false,
-            message: 'Verifica los datos, elige un apartado y usa una contraseña de al menos 8 caracteres.'
+            message: 'Verifica tus datos y usa una contraseña de al menos 8 caracteres.'
         });
         return;
     }

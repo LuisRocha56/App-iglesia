@@ -1,6 +1,6 @@
 # Mi Iglesia
 
-El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. La página inicial tiene una única pantalla adaptable de registro/inicio de sesión inspirada en la referencia visual. Las cuentas pueden elegir Congregación o Miembros de alabanza; todas comienzan con el rol Miembro. El perfil Master puede asignar Músico, Coordinador, Multimedia, Sonido o Miembro. Master es un rol único y no se asigna desde la administración normal.
+El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. La página inicial tiene una única pantalla adaptable de registro/inicio de sesión inspirada en la referencia visual. Las cuentas nuevas se guardan en Congregación con el rol Miembro. El perfil Master puede asignar Músico, Coordinador, Multimedia, Sonido o Miembro. Master es un rol único y no se asigna desde la administración normal.
 
 ## Desarrollo local
 
