@@ -301,6 +301,15 @@
             display:inline-flex; align-items:center; gap:7px; padding:6px 9px;
             border-radius:999px; background:#edf3ff; color:var(--navy); font-size:12px;
         }
+        .assignment-draft-list { display:grid; gap:8px; margin-top:10px; }
+        .assignment-draft { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); font-size:13px; }
+        .assignment-draft-empty { margin:8px 0 0; color:var(--muted); font-size:13px; }
+        .assignment-draft-actions { display:grid; gap:8px; margin-top:12px; }
+        .whatsapp-consent { display:flex; align-items:flex-start; gap:9px; color:var(--muted); line-height:1.5; }
+        .whatsapp-consent.full { grid-column:1 / -1; }
+        .whatsapp-consent input { width:17px; height:17px; flex:0 0 auto; margin:2px 0 0; accent-color:var(--blue); }
+        [data-view-section]:not([hidden]) { animation:section-enter .26s ease-out both; }
+        @keyframes section-enter { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
         .remove-assignment {
             padding:0; border:0; background:none; color:#9b2631; font:inherit; font-weight:700; cursor:pointer;
         }
@@ -405,7 +414,7 @@
                 position:fixed;
                 z-index:21;
                 inset:0 auto 0 0;
-                display:none;
+                display:flex;
                 width:min(84vw, 340px);
                 flex-direction:column;
                 flex-wrap:nowrap;
@@ -417,8 +426,12 @@
                 border-right:1px solid var(--line);
                 border-radius:0 18px 18px 0;
                 box-shadow:16px 0 44px rgba(0,14,41,.2);
+                transform:translateX(-105%);
+                visibility:hidden;
+                opacity:0;
+                transition:transform .24s cubic-bezier(.2,.75,.25,1), opacity .2s ease, visibility .24s;
             }
-            .app-menu[data-open="true"] { display:flex; }
+            .app-menu[data-open="true"] { transform:translateX(0); visibility:visible; opacity:1; }
             .mobile-menu-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; padding:4px 2px 15px; border-bottom:1px solid var(--line); color:var(--navy); font-family:Georgia, 'Times New Roman', serif; font-size:20px; font-weight:700; }
             .mobile-menu-close { display:grid; width:38px; height:38px; flex:0 0 auto; place-items:center; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--navy); font:inherit; font-size:22px; cursor:pointer; }
             .menu-link { display:flex; width:100%; min-height:46px; align-items:center; justify-content:space-between; gap:10px; padding:0 13px; text-align:left; }
@@ -643,7 +656,7 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; }
+            *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; }
         }
     </style>
 </head>
@@ -735,6 +748,10 @@
                 </label>
                 <label class="form-field">Número de casa
                     <input name="houseNumber" maxlength="30" required>
+                </label>
+                <label class="whatsapp-consent full">
+                    <input name="whatsappOptIn" type="checkbox">
+                    <span>Acepto que Mi Iglesia envíe a mi número avisos por WhatsApp cuando se me asigne un puesto; para ello se compartirán mi nombre, puesto y datos del culto necesarios para el aviso. Puedo retirar mi consentimiento desde este perfil.</span>
                 </label>
                 <button class="action-button" type="submit">Guardar mis datos</button>
             </form>
@@ -922,6 +939,13 @@
                         </label>
                         <button class="action-button" type="submit">Asignar puesto</button>
                     </div>
+                    <div class="assignment-draft-actions">
+                        <div>
+                            <strong>Equipo pendiente</strong>
+                            <div class="assignment-draft-list" id="assignmentDraftList" aria-live="polite"></div>
+                        </div>
+                        <button class="action-button" id="finalizeAssignmentBtn" type="button" disabled>Terminar asignación de equipo</button>
+                    </div>
                 </form>
             </div>
             <div class="service-list" id="serviceList"></div>
@@ -1026,6 +1050,7 @@
         const servicesStatus = document.getElementById('servicesStatus');
         let currentServices = [];
         let directoryUsers = [];
+        const pendingAssignmentsByService = new Map();
         let canManageServices = false;
         let canManageCommunity = false;
         let canSeeTeam = false;
@@ -1079,6 +1104,13 @@
         function setActiveView(view) {
             document.querySelectorAll('[data-view-section]').forEach((section) => {
                 section.hidden = section.dataset.viewSection !== view;
+                if (!section.hidden) {
+                    section.classList.remove('view-enter');
+                    void section.offsetWidth;
+                    section.classList.add('view-enter');
+                } else {
+                    section.classList.remove('view-enter');
+                }
             });
             document.querySelectorAll('.menu-link').forEach((button) => {
                 if (button.dataset.view === view) button.setAttribute('aria-current', 'page');
@@ -1235,9 +1267,23 @@
             const userSelect = document.querySelector('#assignmentForm [name="userId"]');
             const position = positionSelect.value;
             const neededRoles = positionRoles[position] || [];
-            const options = directoryUsers.filter((user) =>
-                neededRoles.some((area) => getUserAreas(user).includes(area))
-            );
+            const serviceId = document.querySelector('#assignmentForm [name="serviceId"]').value;
+            const service = currentServices.find((item) => String(item.id) === serviceId);
+            const existingAssignments = service?.assignments || [];
+            const pendingAssignments = pendingAssignmentsByService.get(serviceId) || [];
+            const options = directoryUsers.filter((user) => {
+                if (!neededRoles.some((area) => getUserAreas(user).includes(area))) return false;
+                const userId = String(user.id);
+                const occupiedPositions = [
+                    ...existingAssignments.filter((assignment) => String(assignment.userId) === userId)
+                        .map((assignment) => assignment.position),
+                    ...pendingAssignments.filter((assignment) => assignment.userId === userId)
+                        .map((assignment) => assignment.position)
+                ];
+                return position === 'Dirección'
+                    ? !occupiedPositions.includes('Dirección')
+                    : !occupiedPositions.some((assignedPosition) => assignedPosition !== 'Dirección');
+            });
             userSelect.replaceChildren();
             options.forEach((user) => {
                 const option = document.createElement('option');
@@ -1251,6 +1297,38 @@
                 option.textContent = 'No hay personas con ese rol';
                 userSelect.appendChild(option);
             }
+        }
+
+        function renderAssignmentDrafts() {
+            const serviceId = document.querySelector('#assignmentForm [name="serviceId"]').value;
+            const drafts = pendingAssignmentsByService.get(serviceId) || [];
+            const list = document.getElementById('assignmentDraftList');
+            const finishButton = document.getElementById('finalizeAssignmentBtn');
+            list.replaceChildren();
+            finishButton.disabled = !drafts.length;
+            if (!drafts.length) {
+                addTextElement(list, 'p', 'assignment-draft-empty', 'Las asignaciones aparecerán aquí antes de guardarse.');
+                return;
+            }
+            drafts.forEach((assignment, index) => {
+                const row = document.createElement('div');
+                row.className = 'assignment-draft';
+                addTextElement(row, 'span', '', `${assignment.position} · ${assignment.name}`);
+                const remove = document.createElement('button');
+                remove.className = 'remove-assignment';
+                remove.type = 'button';
+                remove.textContent = 'Quitar';
+                remove.setAttribute('aria-label', `Quitar ${assignment.position} de ${assignment.name} de la lista pendiente`);
+                remove.addEventListener('click', () => {
+                    const remaining = pendingAssignmentsByService.get(serviceId) || [];
+                    remaining.splice(index, 1);
+                    if (!remaining.length) pendingAssignmentsByService.delete(serviceId);
+                    renderAssignmentDrafts();
+                    refreshAssignmentOptions();
+                });
+                row.appendChild(remove);
+                list.appendChild(row);
+            });
         }
 
         function addAttendanceButton(parent, service, assignment) {
@@ -1336,6 +1414,7 @@
         function renderServices() {
             const serviceList = document.getElementById('serviceList');
             const serviceSelect = document.querySelector('#assignmentForm [name="serviceId"]');
+            const previousServiceId = serviceSelect.value;
             serviceList.replaceChildren();
             serviceSelect?.replaceChildren();
 
@@ -1449,11 +1528,15 @@
                 serviceList.appendChild(card);
             });
 
+            if (currentServices.some((service) => String(service.id) === previousServiceId)) {
+                serviceSelect.value = previousServiceId;
+            }
             if (!currentServices.length) {
                 addTextElement(serviceList, 'p', 'empty-state', 'Aún no hay cultos o eventos programados.');
             }
             renderHomeServices();
             refreshAssignmentOptions();
+            renderAssignmentDrafts();
         }
 
         async function loadServices() {
@@ -1942,27 +2025,74 @@
             event.preventDefault();
             const form = event.currentTarget;
             const data = new FormData(form);
-            const button = form.querySelector('button[type="submit"]');
-            button.disabled = true;
-            servicesStatus.textContent = '';
-            try {
-                await MiIglesia.request(`/api/services/${encodeURIComponent(data.get('serviceId'))}/assignments`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        userId: data.get('userId'),
-                        position: data.get('position')
-                    })
-                });
-                servicesStatus.textContent = 'Puesto asignado al culto.';
-                await loadServices();
-            } catch (error) {
-                servicesStatus.textContent = error.message || 'No se pudo asignar el puesto.';
-            } finally {
-                button.disabled = false;
+            const serviceId = String(data.get('serviceId') || '');
+            const userId = String(data.get('userId') || '');
+            const user = directoryUsers.find((item) => String(item.id) === userId);
+            if (!serviceId || !user) {
+                servicesStatus.textContent = 'Selecciona un culto, un puesto y una persona válidos.';
+                return;
             }
+            const drafts = pendingAssignmentsByService.get(serviceId) || [];
+            drafts.push({ userId, position: String(data.get('position')), name: user.nombre });
+            pendingAssignmentsByService.set(serviceId, drafts);
+            renderAssignmentDrafts();
+            refreshAssignmentOptions();
+            servicesStatus.textContent = 'Puesto agregado al equipo pendiente. Aún no se ha guardado ni notificado.';
         });
 
         document.querySelector('#assignmentForm [name="position"]').addEventListener('change', refreshAssignmentOptions);
+        document.querySelector('#assignmentForm [name="serviceId"]').addEventListener('change', () => {
+            refreshAssignmentOptions();
+            renderAssignmentDrafts();
+        });
+        document.getElementById('finalizeAssignmentBtn').addEventListener('click', async () => {
+            const serviceId = document.querySelector('#assignmentForm [name="serviceId"]').value;
+            const drafts = pendingAssignmentsByService.get(serviceId) || [];
+            if (!drafts.length) return;
+
+            const form = document.getElementById('assignmentForm');
+            const controls = [...form.querySelectorAll('select, button')];
+            controls.forEach((control) => { control.disabled = true; });
+            servicesStatus.textContent = 'Guardando el equipo y enviando las notificaciones…';
+            try {
+                const result = await MiIglesia.request(
+                    `/api/services/${encodeURIComponent(serviceId)}/assignments/batch`,
+                    {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            assignments: drafts.map(({ userId, position }) => ({ userId, position }))
+                        })
+                    }
+                );
+                pendingAssignmentsByService.delete(serviceId);
+                renderAssignmentDrafts();
+                const notifications = result.notifications || { sent: [], failed: [], skipped: [] };
+                const messages = [`Equipo guardado: ${result.assignments.length} asignaciones.`];
+                if (notifications.sent.length) {
+                    messages.push(`Meta aceptó los avisos para ${notifications.sent.length} persona(s).`);
+                }
+                if (notifications.failed.length) {
+                    const reasons = notifications.failed.slice(0, 3)
+                        .map(({ name, reason }) => `${name}: ${reason}`).join(' ');
+                    messages.push(`No se pudo enviar a ${notifications.failed.length}: ${reasons}`);
+                }
+                if (notifications.skipped.length) {
+                    messages.push(`${notifications.skipped.length} persona(s) no recibieron aviso por no contar con consentimiento.`);
+                }
+                servicesStatus.textContent = messages.join(' ');
+                try {
+                    await loadServices();
+                } catch (error) {
+                    servicesStatus.textContent += ` No se pudo actualizar la vista del programa: ${error.message}`;
+                }
+            } catch (error) {
+                servicesStatus.textContent = error.message || 'No se pudo guardar el equipo; la lista pendiente se conservó.';
+            } finally {
+                controls.forEach((control) => { control.disabled = false; });
+                renderAssignmentDrafts();
+                refreshAssignmentOptions();
+            }
+        });
 
         document.getElementById('cancelServiceEdit').addEventListener('click', () => {
             const form = document.getElementById('serviceForm');
@@ -2195,7 +2325,8 @@
                         email: String(data.get('email')).trim(),
                         addressStreet: String(data.get('addressStreet')).trim(),
                         addressNeighborhood: String(data.get('addressNeighborhood')).trim(),
-                        houseNumber: String(data.get('houseNumber')).trim()
+                        houseNumber: String(data.get('houseNumber')).trim(),
+                        whatsappOptIn: data.get('whatsappOptIn') === 'on'
                     })
                 });
                 document.getElementById('welcomeName').textContent = user.nombre;
@@ -2269,6 +2400,7 @@
             profileForm.elements.addressStreet.value = user.address_street || '';
             profileForm.elements.addressNeighborhood.value = user.address_neighborhood || '';
             profileForm.elements.houseNumber.value = user.house_number || '';
+            profileForm.elements.whatsappOptIn.checked = Boolean(user.whatsapp_opt_in);
             const profileComplete = Boolean(
                 user.address_street?.trim()
                 && user.address_neighborhood?.trim()

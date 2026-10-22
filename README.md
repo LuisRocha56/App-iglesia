@@ -23,6 +23,8 @@ El inicio muestra anuncios y próximos eventos. El menú despliega las funciones
 
 Las asignaciones solo se muestran a usuarios con roles de equipo, coordinación o Master; los miembros ven el calendario sin el roster. Los puestos de música, multimedia y sonido requieren el rol correspondiente; cada persona puede tener un puesto operativo por culto y Dirección puede añadirse además. Las personas asignadas pueden confirmar asistencia durante el día del evento. Las asignaciones se eliminan después de terminar el día del evento en la zona horaria `America/Mexico_City`; la limpieza corre al iniciar el API, periódicamente y antes de servir el programa.
 
+Master y Coordinación pueden preparar varias asignaciones para un evento; la lista es un borrador y no modifica el programa hasta pulsar **Terminar asignación de equipo**. Al finalizar, el API valida y guarda el lote completo en una transacción. Después intenta notificar por WhatsApp; un fallo de WhatsApp no deshace las asignaciones guardadas. Solo se envían avisos a personas que aceptaron recibirlos desde su perfil. Mientras `WHATSAPP_TEST_RECIPIENT` tenga un valor, todos los avisos se dirigen exclusivamente a ese número de prueba (no a los teléfonos de los miembros).
+
 Las peticiones de oración quedan pendientes hasta que Master o Coordinación las aprueben. El menú de Coordinación muestra el total pendiente y, al entrar, abre una ventana informativa con las peticiones; la aprobación se realiza desde la lista de coordinación. Después, la comunidad puede acompañarlas. Multimedia y Coordinación programan cantos por evento. El repertorio de “Cantos Getse” (título, autor y secuencia) se importa idempotentemente desde `backend/cantos-getse.json`; la última vez tocado se calcula con los eventos pasados que incluyan ese canto.
 
 El perfil exige calle, colonia y número de casa para desbloquear el resto del menú. El directorio de Coordinación se divide en Grupo de alabanza (roles Master, Músico, Coordinador, Sonido o Multimedia) e Iglesia general, con búsqueda por nombre.
@@ -50,6 +52,12 @@ Agrega estas variables de entorno en el servicio:
 - `NODE_ENV`: `production`.
 - `FRONTEND_ORIGIN`: dominio exacto de Vercel, sin barra final.
 - `MASTER_EMAIL`: correo de la cuenta que debe recibir el rol Master. La cuenta debe estar registrada antes de activar esta variable. El backend promueve esa cuenta una sola vez; la marca de inicialización se guarda en `app_settings`. No permite asignar Master a otras cuentas.
+- `WHATSAPP_ACCESS_TOKEN`: token de WhatsApp Cloud API; guárdalo como secreto y nunca en Git.
+- `WHATSAPP_PHONE_NUMBER_ID`: identificador del número de WhatsApp Cloud API emisor.
+- `WHATSAPP_API_VERSION`: versión Graph API vigente y compatible, por ejemplo `v23.0`.
+- `WHATSAPP_TEMPLATE_NAME` y `WHATSAPP_TEMPLATE_LANGUAGE`: plantilla aprobada por Meta y su idioma. La plantilla debe tener cuatro variables de cuerpo, en este orden: nombre, puesto, evento y fecha/hora.
+- Texto sugerido para la plantilla: `Hola {{1}}, te asignaron el puesto {{2}} en {{3}}. Fecha y hora: {{4}}. Si tienes dudas, contacta a coordinación.`
+- `WHATSAPP_TEST_RECIPIENT`: configura `8182012236` en Render durante las pruebas; `.env.example` ya incluye ese valor para desarrollo local. El API agrega el prefijo `52` cuando se da un número mexicano de 10 dígitos. Antes de producción, borra esta variable o déjala vacía; de otro modo, todos los avisos seguirán llegando únicamente al destinatario de pruebas. La persona que recibe avisos reales debe haber activado el consentimiento de WhatsApp en su perfil.
 
 El rol Master autoriza las rutas administrativas en el servidor. Permite asignar varios roles a otras cuentas; el endpoint rechaza cambios al propio rol y no permite asignar Master.
 

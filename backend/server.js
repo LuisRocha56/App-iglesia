@@ -222,6 +222,90 @@ function sendRouteError(error, res, next) {
     next(error);
 }
 
+function normalizeWhatsAppPhone(value) {
+    let digits = typeof value === 'string' ? value.replace(/\D/g, '') : '';
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (digits.length === 10) digits = `52${digits}`;
+    return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
+async function sendAssignmentWhatsApp(assignment, service) {
+    const testRecipient = process.env.WHATSAPP_TEST_RECIPIENT?.trim();
+    if (!testRecipient && !assignment.whatsapp_opt_in) {
+        return { status: 'skipped', reason: 'La persona no aceptó recibir avisos por WhatsApp.' };
+    }
+
+    const recipient = normalizeWhatsAppPhone(testRecipient || assignment.telefono);
+    if (!recipient) {
+        return {
+            status: 'failed',
+            reason: testRecipient
+                ? 'El destinatario de prueba no es un número válido.'
+                : 'El teléfono de la cuenta no tiene un formato válido.'
+        };
+    }
+
+    const {
+        WHATSAPP_ACCESS_TOKEN: accessToken,
+        WHATSAPP_PHONE_NUMBER_ID: phoneNumberId,
+        WHATSAPP_API_VERSION: apiVersion,
+        WHATSAPP_TEMPLATE_NAME: templateName
+    } = process.env;
+    if (!accessToken || !phoneNumberId || !/^v\d+\.\d+$/.test(apiVersion || '') || !templateName) {
+        return { status: 'failed', reason: 'Falta configurar WhatsApp Cloud API en el servidor.' };
+    }
+
+    const date = new Intl.DateTimeFormat('es-MX', {
+        dateStyle: 'full',
+        timeStyle: 'short',
+        timeZone: 'America/Mexico_City'
+    }).format(new Date(service.starts_at));
+    try {
+        const response = await fetch(
+            `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(phoneNumberId)}/messages`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: recipient,
+                    type: 'template',
+                    template: {
+                        name: templateName,
+                        language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es_MX' },
+                        components: [{
+                            type: 'body',
+                            parameters: [
+                                { type: 'text', text: assignment.nombre },
+                                { type: 'text', text: assignment.position },
+                                { type: 'text', text: service.title },
+                                { type: 'text', text: date }
+                            ]
+                        }]
+                    }
+                }),
+                signal: AbortSignal.timeout(10000)
+            }
+        );
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            console.error('WhatsApp rechazó una notificación de asignación.', {
+                status: response.status,
+                code: result.error?.code
+            });
+            return { status: 'failed', reason: `WhatsApp rechazó la plantilla (HTTP ${response.status}).` };
+        }
+        return { status: 'sent' };
+    } catch (error) {
+        console.error('No se pudo enviar una notificación de asignación por WhatsApp:', error.message);
+        return { status: 'failed', reason: 'No se pudo conectar con WhatsApp Cloud API.' };
+    }
+}
+
 app.use(cors({
     origin(origin, callback) {
         const isLocalDevelopment = process.env.NODE_ENV !== 'production'
@@ -423,7 +507,8 @@ app.get('/api/auth/me', getAuthenticatedUser, async (req, res, next) => {
         const result = await pool.query(
             `SELECT id, nombre, telefono, email, area, role_ids, category,
                     address_street, address_neighborhood, house_number,
-                    (SELECT value FROM app_settings WHERE key = 'church_name') AS church_name
+                   whatsapp_opt_in,
+                   (SELECT value FROM app_settings WHERE key = 'church_name') AS church_name
              FROM users WHERE id = $1`,
             [req.auth.sub]
         );
@@ -444,7 +529,7 @@ app.get('/api/auth/me', getAuthenticatedUser, async (req, res, next) => {
 
 app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
     const {
-        nombre, telefono, email, addressStreet, addressNeighborhood, houseNumber
+        nombre, telefono, email, addressStreet, addressNeighborhood, houseNumber, whatsappOptIn
     } = req.body || {};
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (typeof nombre !== 'string' || nombre.trim().length < 2 || nombre.trim().length > 150
@@ -453,7 +538,8 @@ app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
         || normalizedEmail.length > 255
         || typeof addressStreet !== 'string' || !addressStreet.trim() || addressStreet.trim().length > 200
         || typeof addressNeighborhood !== 'string' || !addressNeighborhood.trim() || addressNeighborhood.trim().length > 150
-        || typeof houseNumber !== 'string' || !houseNumber.trim() || houseNumber.trim().length > 30) {
+        || typeof houseNumber !== 'string' || !houseNumber.trim() || houseNumber.trim().length > 30
+        || (whatsappOptIn !== undefined && typeof whatsappOptIn !== 'boolean')) {
         res.status(400).json({ success: false, message: 'Completa tu nombre, teléfono, correo y domicilio.' });
         return;
     }
@@ -462,13 +548,16 @@ app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
         const result = await pool.query(
             `UPDATE users
              SET nombre = $1, telefono = $2, email = $3,
-                 address_street = $4, address_neighborhood = $5, house_number = $6
-             WHERE id = $7
+                 address_street = $4, address_neighborhood = $5, house_number = $6,
+                 whatsapp_opt_in = COALESCE($7, whatsapp_opt_in)
+             WHERE id = $8
              RETURNING id, nombre, telefono, email, area, role_ids, category,
-                       address_street, address_neighborhood, house_number`,
+                       address_street, address_neighborhood, house_number, whatsapp_opt_in`,
             [
                 nombre.trim(), telefono.trim(), normalizedEmail,
-                addressStreet.trim(), addressNeighborhood.trim(), houseNumber.trim(), req.auth.sub
+                addressStreet.trim(), addressNeighborhood.trim(), houseNumber.trim(),
+                typeof whatsappOptIn === 'boolean' ? whatsappOptIn : null,
+                req.auth.sub
             ]
         );
         if (!result.rows[0]) {
@@ -477,8 +566,8 @@ app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
         }
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
-             VALUES ($1, 'user.profile.updated', 'user', $1, '{}'::JSONB)`,
-            [req.auth.sub]
+             VALUES ($1, 'user.profile.updated', 'user', $1, $2::JSONB)`,
+            [req.auth.sub, JSON.stringify(typeof whatsappOptIn === 'boolean' ? { whatsappOptIn } : {})]
         );
         res.json({ success: true, user: { ...result.rows[0], ...getUserRoles(result.rows[0]) } });
     } catch (error) {
@@ -752,6 +841,172 @@ app.post('/api/services/:id/assignments', getAuthenticatedUser, requireCoordinat
         }
         if (error.code === '23503') {
             res.status(404).json({ success: false, message: 'No se encontró ese culto.' });
+            return;
+        }
+        next(error);
+    }
+});
+
+app.post('/api/services/:serviceId/assignments/batch', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
+    const serviceId = req.params.serviceId;
+    const rawAssignments = req.body?.assignments;
+    if (!/^[1-9]\d*$/.test(serviceId) || !Array.isArray(rawAssignments)
+        || rawAssignments.length < 1 || rawAssignments.length > 40) {
+        res.status(400).json({ success: false, message: 'Agrega entre 1 y 40 asignaciones válidas.' });
+        return;
+    }
+
+    const assignments = rawAssignments.map((item) => ({
+        userId: String(item?.userId || ''),
+        position: item?.position
+    }));
+    if (assignments.some(({ userId, position }) =>
+        !/^[1-9]\d*$/.test(userId) || !Object.hasOwn(servicePositions, position))) {
+        res.status(400).json({ success: false, message: 'Hay una persona o puesto inválido en la lista.' });
+        return;
+    }
+    const userIds = [...new Set(assignments.map(({ userId }) => userId))];
+    const exactAssignments = new Set();
+    const operationalUsers = new Set();
+    for (const assignment of assignments) {
+        const key = `${assignment.userId}:${assignment.position}`;
+        if (exactAssignments.has(key)
+            || (assignment.position !== 'Dirección' && operationalUsers.has(assignment.userId))) {
+            res.status(409).json({
+                success: false,
+                message: 'La lista contiene puestos repetidos o más de un puesto operativo para una persona.'
+            });
+            return;
+        }
+        exactAssignments.add(key);
+        if (assignment.position !== 'Dirección') operationalUsers.add(assignment.userId);
+    }
+
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query('BEGIN');
+        const serviceResult = await client.query(
+            'SELECT id, title, starts_at FROM service_events WHERE id = $1 FOR UPDATE',
+            [serviceId]
+        );
+        const service = serviceResult.rows[0];
+        if (!service) {
+            const error = new Error('No se encontró ese culto o evento.');
+            error.status = 404;
+            throw error;
+        }
+
+        const usersResult = await client.query(
+            'SELECT id, nombre, telefono, whatsapp_opt_in, role_ids, area FROM users WHERE id = ANY($1::bigint[])',
+            [userIds]
+        );
+        const users = new Map(usersResult.rows.map((user) => [String(user.id), user]));
+        if (users.size !== userIds.length) {
+            const error = new Error('No se encontró una o más cuentas de la lista.');
+            error.status = 404;
+            throw error;
+        }
+        const existingResult = await client.query(
+            'SELECT user_id, position FROM service_assignments WHERE event_id = $1',
+            [serviceId]
+        );
+        const existingByUser = new Map();
+        existingResult.rows.forEach(({ user_id, position }) => {
+            const userKey = String(user_id);
+            if (!existingByUser.has(userKey)) existingByUser.set(userKey, []);
+            existingByUser.get(userKey).push(position);
+        });
+        const nextByUser = new Map();
+        for (const assignment of assignments) {
+            const user = users.get(assignment.userId);
+            const { areas } = getUserRoles(user);
+            if (!servicePositions[assignment.position].some((area) => areas.includes(area))) {
+                const error = new Error(`${user.nombre} no tiene el rol requerido para ${assignment.position}.`);
+                error.status = 403;
+                throw error;
+            }
+
+            const existingPositions = existingByUser.get(assignment.userId) || [];
+            const pendingPositions = nextByUser.get(assignment.userId) || [];
+            if (existingPositions.includes(assignment.position)
+                || pendingPositions.includes(assignment.position)
+                || (assignment.position !== 'Dirección'
+                    && [...existingPositions, ...pendingPositions].some((position) => position !== 'Dirección'))) {
+                const error = new Error(`${user.nombre} ya tiene un puesto operativo o este puesto en el evento.`);
+                error.status = 409;
+                throw error;
+            }
+            nextByUser.set(assignment.userId, [...pendingPositions, assignment.position]);
+        }
+
+        const savedAssignments = [];
+        for (const assignment of assignments) {
+            const result = await client.query(
+                `INSERT INTO service_assignments (event_id, user_id, position, assigned_by)
+                 VALUES ($1, $2, $3, $4)
+                 RETURNING id, event_id, user_id, position`,
+                [serviceId, assignment.userId, assignment.position, req.auth.sub]
+            );
+            const user = users.get(assignment.userId);
+            savedAssignments.push({
+                ...result.rows[0],
+                nombre: user.nombre,
+                telefono: user.telefono,
+                whatsapp_opt_in: user.whatsapp_opt_in
+            });
+            await client.query(
+                `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
+                 VALUES ($1, 'service.assignment.created', 'service_assignment', $2, $3::JSONB)`,
+                [req.auth.sub, result.rows[0].id, JSON.stringify({ serviceId, userId: assignment.userId, position: assignment.position })]
+            );
+        }
+        await client.query('COMMIT');
+        client.release();
+        client = null;
+
+        const notificationResults = await Promise.all(
+            savedAssignments.map(async (assignment) => ({
+                name: assignment.nombre,
+                ...(await sendAssignmentWhatsApp(assignment, service))
+            }))
+        );
+        const notifications = {
+            sent: notificationResults.filter((result) => result.status === 'sent').map(({ name }) => name),
+            failed: notificationResults.filter((result) => result.status === 'failed')
+                .map(({ name, reason }) => ({ name, reason })),
+            skipped: notificationResults.filter((result) => result.status === 'skipped')
+                .map(({ name, reason }) => ({ name, reason }))
+        };
+        res.status(201).json({
+            success: true,
+            assignments: savedAssignments.map(({ id, event_id, user_id, position, nombre }) => ({
+                id, event_id, user_id, position, name: nombre
+            })),
+            notifications
+        });
+    } catch (error) {
+        if (client) {
+            try {
+                await client.query('ROLLBACK');
+            } catch (rollbackError) {
+                console.error('No se pudo revertir el lote de asignaciones:', rollbackError.message);
+            }
+            client.release();
+        }
+        if (error.code === '23505') {
+            res.status(409).json({
+                success: false,
+                message: 'Una persona ya tiene un puesto operativo o ya está asignada a ese puesto.'
+            });
+            return;
+        }
+        if (error.code === '23503') {
+            res.status(404).json({ success: false, message: 'No se encontró el culto o una cuenta de la lista.' });
+            return;
+        }
+        if (error.status) {
+            res.status(error.status).json({ success: false, message: error.message });
             return;
         }
         next(error);
@@ -1618,6 +1873,10 @@ async function startServer() {
         ADD COLUMN IF NOT EXISTS address_street VARCHAR(200) NOT NULL DEFAULT '',
         ADD COLUMN IF NOT EXISTS address_neighborhood VARCHAR(150) NOT NULL DEFAULT '',
         ADD COLUMN IF NOT EXISTS house_number VARCHAR(30) NOT NULL DEFAULT ''
+    `);
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS whatsapp_opt_in BOOLEAN NOT NULL DEFAULT FALSE
     `);
     await pool.query(`
         UPDATE users SET role_ids = ARRAY[area]::INTEGER[] WHERE role_ids IS NULL
