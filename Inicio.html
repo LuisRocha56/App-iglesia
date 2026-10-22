@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Iglesia - Inicio</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #4289fa 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .welcome-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 400px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: rgb(16, 137, 211);
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="welcome-card">
+        <h1>¡Bienvenido a Mi Iglesia!</h1>
+        <p id="welcomeMessage">Has iniciado sesión correctamente.</p>
+        
+        <button class="logout-btn" id="logoutBtn">Cerrar Sesión</button>
+    </div>
+
+    <script src="api-config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const logoutBtn = document.getElementById('logoutBtn');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+
+        MiIglesia.request('/api/auth/me')
+            .then(({ user }) => {
+                welcomeMessage.textContent = `Has iniciado sesión correctamente, ${user.nombre}.`;
+            })
+            .catch(() => {
+                MiIglesia.clearToken();
+                window.location.replace('index.html');
+            });
+
+        logoutBtn.addEventListener('click', () => {
+            MiIglesia.clearToken();
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "app-mi-iglesia",
+  "version": "1.0.0",
+  "description": "API de Mi Iglesia",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
