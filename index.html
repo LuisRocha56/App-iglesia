@@ -96,8 +96,12 @@
             place-items: center;
             border: 1px solid rgba(255,255,255,.24);
             border-radius: 12px;
-            color: var(--steel);
-            font-size: 22px;
+        }
+
+        .brand-icon img {
+            width: 27px;
+            height: 27px;
+            object-fit: contain;
         }
 
         .side-copy { max-width: 470px; padding-bottom: 9%; }
@@ -139,9 +143,12 @@
             height: 34px;
             place-items: center;
             margin-bottom: 7px;
-            color: var(--blue);
-            font-size: 32px;
-            line-height: 1;
+        }
+
+        .form-icon img {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
         }
 
         .form-box h2 {
@@ -283,7 +290,7 @@
     <main class="page-card">
         <aside class="side-panel">
             <div class="brand">
-                <span class="brand-icon" aria-hidden="true">✳</span>
+                <span class="brand-icon"><img src="src/images/Logo/LOGO_Blanco.png" alt=""></span>
                 <span>Mi Iglesia</span>
             </div>
             <div class="side-copy">
@@ -295,7 +302,7 @@
 
         <section class="form-panel" aria-labelledby="formTitle">
             <div class="form-box">
-                <div class="form-icon" aria-hidden="true">✳</div>
+                <div class="form-icon"><img src="src/images/Logo/LOGO_Bicolor.png" alt=""></div>
                 <h2 id="formTitle">Crear cuenta</h2>
                 <p class="help-text" id="formSubtitle">Bienvenido a Mi Iglesia. Comencemos.</p>
                 <hr class="line">

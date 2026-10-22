@@ -57,23 +57,27 @@
         }
 
         .brand-icon {
-            display: grid;
             width: 42px;
             height: 42px;
-            place-items: center;
-            border: 1px solid rgba(255,255,255,.3);
-            border-radius: 13px;
-            color: var(--steel);
-            font-size: 24px;
+            object-fit: contain;
         }
 
         .nav-right {
             display: flex;
+            min-width: 0;
             align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
             gap: 12px;
         }
 
-        .nav-right span { color: rgba(255,255,255,.82); font-size: 13px; }
+        .nav-right span {
+            max-width: 100%;
+            color: rgba(255,255,255,.82);
+            font-size: 13px;
+            overflow-wrap: anywhere;
+            text-align: right;
+        }
 
         .logout {
             min-height: 38px;
@@ -88,11 +92,14 @@
 
         .welcome {
             display: flex;
+            width: min(100%, 1040px);
             align-items: end;
             justify-content: space-between;
             gap: 20px;
-            margin-top: 42px;
+            margin: 42px auto 0;
         }
+
+        .welcome > div { min-width: 0; }
 
         .welcome p {
             margin: 0 0 8px;
@@ -108,10 +115,12 @@
         h1 {
             margin: 0;
             font-size: clamp(29px, 5vw, 43px);
+            overflow-wrap: anywhere;
         }
 
         .role-badge {
             display: inline-block;
+            max-width: 100%;
             padding: 8px 13px;
             border: 1px solid rgba(255,255,255,.3);
             border-radius: 999px;
@@ -119,7 +128,8 @@
             color: var(--steel);
             font-size: 13px;
             font-weight: 700;
-            white-space: nowrap;
+            overflow-wrap: anywhere;
+            text-align: center;
         }
 
         main {
@@ -223,7 +233,7 @@
         .user-list { display:grid; gap:10px; }
         .user-row {
             display:grid;
-            grid-template-columns: minmax(0, 1fr) 175px auto;
+            grid-template-columns: minmax(0, 1fr) minmax(175px, 1fr) auto;
             align-items:center;
             gap:12px;
             padding:12px;
@@ -232,16 +242,17 @@
         }
         .user-name { color:var(--navy); font-weight:700; }
         .user-meta { margin-top:3px; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
-        .role-select {
-            width:100%;
-            min-height:38px;
-            padding:6px 9px;
-            border:1px solid #d8deea;
-            border-radius:9px;
-            background:white;
-            color:var(--ink);
-            font:inherit;
+        .role-options {
+            display:flex;
+            flex-wrap:wrap;
+            gap:7px 12px;
+            margin:0;
+            padding:0;
+            border:0;
         }
+        .role-options legend { flex:0 0 100%; margin-bottom:5px; color:var(--muted); font-size:12px; }
+        .role-option { display:flex; align-items:center; gap:5px; color:var(--ink); font-size:13px; }
+        .role-option input { accent-color:var(--blue); }
         .save-role {
             min-height:38px;
             padding:0 13px;
@@ -266,16 +277,16 @@
             .announcement { padding:19px; }
             .announcement-icon { width:48px; height:48px; font-size:24px; }
             .content-grid { grid-template-columns:1fr; }
-            .user-row { grid-template-columns:1fr auto; }
-            .role-select { grid-column:1; }
-            .save-role { grid-column:2; grid-row:2; }
+            .user-row { grid-template-columns:minmax(0, 1fr); }
+            .role-options { grid-column:1 / -1; }
+            .save-role { grid-column:1; grid-row:auto; justify-self:end; }
         }
     </style>
 </head>
 <body>
     <header class="hero">
         <nav class="nav">
-            <div class="brand"><span class="brand-icon" aria-hidden="true">✚</span><span>Mi Iglesia</span></div>
+            <div class="brand"><img class="brand-icon" src="src/images/Logo/LOGO_Blanco.png" alt=""><span>Mi Iglesia</span></div>
             <div class="nav-right">
                 <span id="userName"></span>
                 <button class="logout" id="logoutBtn" type="button">Cerrar sesión</button>
@@ -323,7 +334,7 @@
             <div class="admin-heading">
                 <div>
                     <h2>Administrar roles</h2>
-                    <p>Asigna a cada persona el rol correspondiente. Las cuentas nuevas comienzan como Miembro.</p>
+                    <p>Asigna uno o varios roles a cada persona. Las cuentas nuevas comienzan como Miembro.</p>
                 </div>
             </div>
             <p class="status" id="adminStatus" role="status"></p>
@@ -342,7 +353,7 @@
             5: 'Master',
             6: 'Miembro'
         };
-        const roleOptions = [1, 2, 3, 4, 5, 6];
+        const roleOptions = [1, 2, 3, 4, 6];
         const userList = document.getElementById('userList');
         const adminStatus = document.getElementById('adminStatus');
 
@@ -366,34 +377,45 @@
                 addTextElement(identity, 'div', 'user-meta', `${user.email} · ${user.category === 'worship' ? 'Alabanza' : 'Congregación'}`);
                 row.appendChild(identity);
 
-                const select = document.createElement('select');
-                select.className = 'role-select';
-                select.setAttribute('aria-label', `Rol de ${user.nombre}`);
+                const roleGroup = document.createElement('fieldset');
+                roleGroup.className = 'role-options';
+                const legend = document.createElement('legend');
+                legend.textContent = `Roles de ${user.nombre}`;
+                roleGroup.appendChild(legend);
+                const selectedAreas = Array.isArray(user.areas) ? user.areas.map(Number) : [Number(user.area)];
                 roleOptions.forEach((area) => {
-                    const option = document.createElement('option');
-                    option.value = String(area);
-                    option.textContent = roleLabels[area];
-                    option.disabled = area === 5 && String(user.id) !== String(currentUserId);
-                    option.selected = Number(user.area) === area;
-                    select.appendChild(option);
+                    const label = document.createElement('label');
+                    label.className = 'role-option';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = String(area);
+                    checkbox.checked = selectedAreas.includes(area);
+                    checkbox.disabled = String(user.id) === String(currentUserId);
+                    label.append(checkbox, document.createTextNode(roleLabels[area]));
+                    roleGroup.appendChild(label);
                 });
-                select.disabled = String(user.id) === String(currentUserId);
-                row.appendChild(select);
+                row.appendChild(roleGroup);
 
                 const saveButton = document.createElement('button');
                 saveButton.className = 'save-role';
                 saveButton.type = 'button';
                 saveButton.textContent = 'Guardar';
-                saveButton.disabled = select.disabled;
+                saveButton.disabled = String(user.id) === String(currentUserId);
                 saveButton.addEventListener('click', async () => {
+                    const areas = [...roleGroup.querySelectorAll('input:checked')]
+                        .map((checkbox) => Number(checkbox.value));
+                    if (areas.length === 0) {
+                        adminStatus.textContent = `Selecciona al menos un rol para ${user.nombre}.`;
+                        return;
+                    }
                     saveButton.disabled = true;
                     adminStatus.textContent = '';
                     try {
                         await MiIglesia.request(`/api/admin/users/${encodeURIComponent(user.id)}/role`, {
                             method: 'PATCH',
-                            body: JSON.stringify({ area: Number(select.value) })
+                            body: JSON.stringify({ areas })
                         });
-                        adminStatus.textContent = `Rol actualizado para ${user.nombre}.`;
+                        adminStatus.textContent = `Roles actualizados para ${user.nombre}: ${areas.map((area) => roleLabels[area]).join(', ')}.`;
                     } catch (error) {
                         adminStatus.textContent = error.message || 'No se pudo actualizar el rol.';
                     } finally {
@@ -410,14 +432,16 @@
                 const { user } = await MiIglesia.request('/api/auth/me');
                 document.getElementById('welcomeName').textContent = user.nombre;
                 document.getElementById('userName').textContent = user.nombre;
-                document.getElementById('roleBadge').textContent = roleLabels[user.area] || 'Miembro';
+                const areas = Array.isArray(user.areas) ? user.areas.map(Number) : [Number(user.area)];
+                document.getElementById('roleBadge').textContent =
+                    areas.map((area) => roleLabels[area]).filter(Boolean).join(' · ') || 'Miembro';
                 document.getElementById('categoryLabel').textContent =
                     user.category === 'worship' ? 'Miembros de alabanza' : 'Congregación';
 
                 const dashboard = await MiIglesia.request('/api/dashboard');
                 document.getElementById('memberCount').textContent = dashboard.memberCount;
 
-                if (Number(user.area) === 5) {
+                if (areas.includes(5)) {
                     document.getElementById('adminPanel').hidden = false;
                     await loadUsers(user.id);
                 }

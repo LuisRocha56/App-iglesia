@@ -1,6 +1,6 @@
 # Mi Iglesia
 
-El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. La página inicial tiene una única pantalla adaptable de registro/inicio de sesión inspirada en la referencia visual. Las cuentas nuevas se guardan en Congregación con el rol Miembro. El perfil Master puede asignar Músico, Coordinador, Multimedia, Sonido o Miembro. Master es un rol único y no se asigna desde la administración normal.
+El frontend es estático y se publica en Vercel. La API Express corre en Render y usa PostgreSQL de Neon. La página inicial tiene una única pantalla adaptable de registro/inicio de sesión inspirada en la referencia visual. Las cuentas nuevas se guardan en Congregación con el rol Miembro. El perfil Master puede asignar uno o varios de estos roles a cada cuenta: Músico, Coordinador, Multimedia, Sonido y Miembro. Master es un rol único y no se asigna desde la administración normal.
 
 ## Desarrollo local
 
@@ -17,7 +17,7 @@ El frontend es estático y se publica en Vercel. La API Express corre en Render 
 
 5. Sirve la raíz del proyecto con Live Server. Para desarrollo local, cambia temporalmente la URL de API de `api-config.js` a `http://localhost:3000`.
 
-El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan su rol y reciben la categoría Congregación por defecto.
+El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se guardan como hashes, no como texto plano. Las cuentas existentes conservan sus roles actuales y reciben la categoría Congregación por defecto. Los roles se migran a una lista para permitir asignar varios a cada persona.
 
 Al abrir `index.html`, si el navegador conserva un token de sesión válido, la página lo comprueba con el API y abre `Inicio.html` automáticamente. Si el token venció, se elimina y se solicita iniciar sesión otra vez. Si el API no responde, el token se conserva. Las sesiones actuales duran 8 horas; borrar los datos del navegador también cierra la sesión.
 
@@ -39,7 +39,7 @@ Agrega estas variables de entorno en el servicio:
 - `FRONTEND_ORIGIN`: dominio exacto de Vercel, sin barra final.
 - `MASTER_EMAIL`: correo de la cuenta que debe recibir el rol Master. La cuenta debe estar registrada antes de activar esta variable. El backend promueve esa cuenta una sola vez; la marca de inicialización se guarda en `app_settings`. No permite asignar Master a otras cuentas.
 
-El rol Master autoriza las rutas administrativas en el servidor. Solo permite asignar roles a otras cuentas; el endpoint rechaza cambios al propio rol.
+El rol Master autoriza las rutas administrativas en el servidor. Permite asignar varios roles a otras cuentas; el endpoint rechaza cambios al propio rol y no permite asignar Master.
 
 ### Vercel (frontend)
 
