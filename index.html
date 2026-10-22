@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f5f1ec">
+    <meta name="theme-color" content="#000e29">
     <title>Mi Iglesia - Crear cuenta</title>
     <style>
         :root {
             color-scheme: light;
-            --orange: #ef6900;
-            --orange-dark: #d95400;
-            --ink: #171717;
-            --muted: #909090;
-            --line: #e4e4e4;
+            --blue: #2929fd;
+            --blue-dark: #1717c9;
+            --navy: #000e29;
+            --steel: #bcd7f7;
+            --ink: #000e29;
+            --muted: #71809a;
+            --line: #dfe8f4;
         }
 
         * { box-sizing: border-box; }
@@ -23,7 +25,10 @@
             place-items: center;
             margin: 0;
             padding: 24px;
-            background: #f1eee9;
+            background:
+                radial-gradient(ellipse at 7% 12%, rgba(41,41,253,.85), transparent 30%),
+                radial-gradient(ellipse at 93% 90%, rgba(41,41,253,.58), transparent 34%),
+                var(--navy);
             color: var(--ink);
             font-family: Inter, 'Segoe UI', Arial, sans-serif;
         }
@@ -36,10 +41,10 @@
             gap: 0;
             padding: 20px;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,.8);
+            border: 1px solid rgba(188,215,247,.48);
             border-radius: 28px;
             background: #fff;
-            box-shadow: 0 24px 70px rgba(42,28,17,.15);
+            box-shadow: 0 24px 70px rgba(0,0,0,.32);
         }
 
         .promo {
@@ -53,9 +58,9 @@
             isolation: isolate;
             border-radius: 23px;
             background:
-                radial-gradient(ellipse at 23% 100%, rgba(255,103,0,.96), transparent 35%),
-                radial-gradient(ellipse at 47% 110%, rgba(255,132,0,.75), transparent 38%),
-                linear-gradient(145deg, #080808 0%, #10100f 65%, #1a1009 100%);
+                radial-gradient(ellipse at 13% 23%, rgba(41,41,253,.92), transparent 35%),
+                radial-gradient(ellipse at 47% 83%, rgba(34,117,245,.78), transparent 41%),
+                linear-gradient(145deg, #000719 0%, var(--navy) 60%, #001b43 100%);
             color: #fff;
         }
 
@@ -67,9 +72,9 @@
             width: 24%;
             height: 58%;
             content: '';
-            background: linear-gradient(0deg, rgba(255,255,255,.92), rgba(255,117,0,.68) 23%, rgba(255,83,0,.02) 100%);
-            filter: blur(20px);
-            opacity: .75;
+            background: linear-gradient(0deg, rgba(188,215,247,.42), rgba(41,41,253,.72) 35%, rgba(41,41,253,.02) 100%);
+            filter: blur(24px);
+            opacity: .8;
         }
 
         .promo::before { left: 8%; transform: skewY(-8deg); }
@@ -91,7 +96,7 @@
             place-items: center;
             border: 1px solid rgba(255,255,255,.24);
             border-radius: 12px;
-            color: #ff7800;
+            color: var(--steel);
             font-size: 22px;
         }
 
@@ -134,7 +139,7 @@
             height: 42px;
             place-items: center;
             margin-bottom: 17px;
-            color: var(--orange);
+            color: var(--blue);
             font-size: 40px;
             line-height: 1;
         }
@@ -184,8 +189,8 @@
 
         .field input:focus {
             outline: 0;
-            border-color: #e5a66d;
-            box-shadow: 0 0 0 3px rgba(239,105,0,.11);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(41,41,253,.12);
         }
 
         .category-field { margin: 3px 0 16px; }
@@ -211,12 +216,12 @@
         }
 
         .category-option:has(input:checked) {
-            border-color: #e9a16b;
-            background: #fff8f2;
-            color: #a74700;
+            border-color: var(--blue);
+            background: #f1f6ff;
+            color: var(--navy);
         }
 
-        .category-option input { accent-color: var(--orange); }
+        .category-option input { accent-color: var(--blue); }
 
         .message {
             min-height: 19px;
@@ -231,17 +236,17 @@
             min-height: 48px;
             border: 0;
             border-radius: 10px;
-            background: var(--orange);
+            background: var(--blue);
             color: white;
             font: inherit;
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 5px 12px rgba(239,105,0,.16);
+            box-shadow: 0 5px 14px rgba(41,41,253,.24);
             transition: background .15s, transform .15s;
         }
 
-        .submit:hover { background: var(--orange-dark); }
+        .submit:hover { background: var(--blue-dark); }
         .submit:active { transform: translateY(1px); }
         .submit:disabled { cursor: wait; opacity: .7; }
 
@@ -256,7 +261,7 @@
             padding: 0;
             border: 0;
             background: none;
-            color: #242424;
+            color: var(--navy);
             font: inherit;
             font-weight: 700;
             text-decoration: underline;

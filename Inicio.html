@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#20366f">
+    <meta name="theme-color" content="#000e29">
     <title>Inicio - Mi Iglesia</title>
     <style>
         :root {
-            --navy: #191919;
-            --blue: #29231f;
-            --gold: #ef6900;
-            --cream: #f5f1ec;
-            --ink: #26221f;
-            --muted: #77716c;
-            --line: #ebe4dc;
+            --navy: #000e29;
+            --blue: #2929fd;
+            --steel: #bcd7f7;
+            --cream: #f3f7fc;
+            --ink: #000e29;
+            --muted: #64748b;
+            --line: #dfe8f4;
         }
 
         * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            background: var(--cream);
+            background:
+                radial-gradient(ellipse at 100% 0%, rgba(188,215,247,.65), transparent 32%),
+                var(--cream);
             color: var(--ink);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -29,9 +31,10 @@
             padding: 23px 22px 80px;
             color: white;
             background:
-                radial-gradient(ellipse at 12% 110%, rgba(239,105,0,.72), transparent 31%),
+                radial-gradient(ellipse at 5% 110%, rgba(41,41,253,.92), transparent 38%),
+                radial-gradient(ellipse at 47% 120%, rgba(31,117,237,.72), transparent 43%),
                 radial-gradient(circle at 89% 28%, rgba(255,255,255,.08) 0 100px, transparent 101px),
-                linear-gradient(135deg, #101010, #29231f);
+                linear-gradient(135deg, #000719, var(--navy) 62%, #001b43);
         }
 
         .nav, main {
@@ -60,7 +63,7 @@
             place-items: center;
             border: 1px solid rgba(255,255,255,.3);
             border-radius: 13px;
-            color: var(--gold);
+            color: var(--steel);
             font-size: 24px;
         }
 
@@ -93,7 +96,7 @@
 
         .welcome p {
             margin: 0 0 8px;
-            color: #f2cb72;
+            color: var(--steel);
             font-size: 12px;
             font-weight: 800;
             letter-spacing: .13em;
@@ -113,7 +116,7 @@
             border: 1px solid rgba(255,255,255,.3);
             border-radius: 999px;
             background: rgba(255,255,255,.1);
-            color: #fff3d1;
+            color: var(--steel);
             font-size: 13px;
             font-weight: 700;
             white-space: nowrap;
@@ -135,7 +138,7 @@
             padding: 17px;
             border: 1px solid rgba(255,255,255,.28);
             border-radius: 17px;
-            background: #26221f;
+            background: var(--navy);
             color: white;
             text-align: center;
             box-shadow: 0 9px 24px rgba(20,39,83,.13);
@@ -143,7 +146,7 @@
 
         .stat strong {
             display: block;
-            color: #f4c75d;
+            color: var(--steel);
             font-family: Georgia, 'Times New Roman', serif;
             font-size: 25px;
         }
@@ -157,8 +160,10 @@
             gap: 20px;
             padding: 25px;
             border-radius: 20px;
-            background: linear-gradient(120deg, #ed6a00, #ff9b28);
-            box-shadow: 0 13px 26px rgba(166,75,0,.17);
+            background:
+                radial-gradient(ellipse at 5% 10%, rgba(41,41,253,.94), transparent 54%),
+                linear-gradient(120deg, #000e29, #153b82);
+            box-shadow: 0 13px 26px rgba(0,14,41,.18);
         }
 
         .announcement .tag {
@@ -179,7 +184,7 @@
             font-size: 25px;
         }
 
-        .announcement p { margin: 0; color: #42270f; line-height: 1.5; }
+        .announcement p { margin: 0;         color: rgba(255,255,255,.9); line-height: 1.5; }
 
         .announcement-icon {
             display: grid;
@@ -209,7 +214,7 @@
 
         .panel h2 { margin: 0 0 8px; color: var(--navy); font-size: 21px; }
         .panel p { margin: 0; color: var(--muted); line-height: 1.55; }
-        .panel .date { color: #b47b10; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+        .panel .date {         color: var(--blue); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 
         .admin-panel { margin-top: 20px; }
         .admin-heading { display:flex; align-items:start; justify-content:space-between; gap:16px; margin-bottom:16px; }
@@ -242,7 +247,7 @@
             padding:0 13px;
             border:0;
             border-radius:9px;
-            background:var(--gold);
+            background:var(--blue);
             color:white;
             font-weight:700;
             cursor:pointer;
