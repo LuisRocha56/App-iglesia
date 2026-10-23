@@ -166,6 +166,65 @@ async function deleteDriveFile(fileId) {
     await getDriveClient().files.delete({ fileId });
 }
 
+function isDriveConfigured() {
+    return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim());
+}
+
+function sendPrivateFile(res, file) {
+    if (!file?.file_data) {
+        res.status(404).json({ success: false, message: 'No se encontró el archivo.' });
+        return;
+    }
+    res.set('Content-Type', file.mime_type)
+        .set('Cache-Control', 'private, max-age=3600')
+        .send(file.file_data);
+}
+
+function parseSongIds(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return null;
+    }
+}
+
+function isValidDateOnly(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function getMexicoDateString() {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Monterrey',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+}
+
+async function deleteExpiredAnnouncements() {
+    const expired = await pool.query(
+        `DELETE FROM announcements
+         WHERE expires_on IS NOT NULL
+           AND expires_on < (NOW() AT TIME ZONE 'America/Monterrey')::date
+         RETURNING id, image_drive_file_id`
+    );
+    for (const announcement of expired.rows) {
+        if (announcement.image_drive_file_id && isDriveConfigured()) {
+            try {
+                await deleteDriveFile(announcement.image_drive_file_id);
+            } catch (error) {
+                console.error(`No se pudo borrar de Drive la imagen del anuncio vencido ${announcement.id}:`, error.message);
+            }
+        } else if (announcement.image_drive_file_id) {
+            console.warn(`El anuncio vencido ${announcement.id} tenía una imagen anterior en Drive; no hay credenciales para eliminarla.`);
+        }
+    }
+}
+
 function parseUpload(middleware) {
     return (req, res, next) => {
         middleware(req, res, (error) => {
@@ -651,7 +710,9 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
                    < (NOW() AT TIME ZONE 'America/Mexico_City')::date`
         );
         const result = await pool.query(
-            `SELECT e.id, e.title, e.event_type, e.starts_at, e.details, e.created_by,
+            `SELECT e.id, e.title, e.event_type, e.starts_at, e.details, e.image_url,
+                    (e.image_data IS NOT NULL OR e.image_url IS NOT NULL) AS has_image,
+                    e.created_by,
                     COALESCE(
                         json_agg(
                             json_build_object(
@@ -695,25 +756,50 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
     }
 });
 
-app.post('/api/services', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
-    const { title, eventType, startsAt, details = '', songIds = [] } = req.body || {};
+app.get('/api/services/:id/image', getAuthenticatedUser, async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El evento no es válido.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            'SELECT image_data AS file_data, image_mime_type AS mime_type FROM service_events WHERE id = $1',
+            [req.params.id]
+        );
+        sendPrivateFile(res, result.rows[0]);
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/services', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
+    const { title, eventType, startsAt, details = '' } = req.body || {};
+    const songIds = parseSongIds(req.body?.songIds ?? []);
     const startDate = typeof startsAt === 'string' ? new Date(startsAt) : null;
     const validTypes = ['Culto', 'Ensayo', 'Evento especial'];
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 120
         || !validTypes.includes(eventType)
         || !startDate || Number.isNaN(startDate.getTime())
-        || typeof details !== 'string' || details.length > 2000) {
-        res.status(400).json({ success: false, message: 'Revisa el nombre, tipo, fecha y detalles del evento.' });
+        || typeof details !== 'string' || details.length > 2000
+        || !Array.isArray(songIds)
+        || (req.file && (!req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)))) {
+        res.status(400).json({ success: false, message: 'Revisa el nombre, tipo, fecha, detalles, cantos e imagen del evento.' });
         return;
     }
 
     try {
         await validateSongIds(songIds);
         const result = await pool.query(
-            `INSERT INTO service_events (title, event_type, starts_at, details, created_by)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO service_events (
+                 title, event_type, starts_at, details, image_data, image_mime_type, created_by
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING id, title, event_type, starts_at, details`,
-            [title.trim(), eventType, startDate.toISOString(), details.trim(), req.auth.sub]
+            [
+                title.trim(), eventType, startDate.toISOString(), details.trim(),
+                req.file?.buffer || null, req.file?.mimetype || null,
+                req.auth.sub
+            ]
         );
         await saveServiceSongs(result.rows[0].id, songIds);
         await pool.query(
@@ -727,17 +813,20 @@ app.post('/api/services', getAuthenticatedUser, requireCoordinator, async (req, 
     }
 });
 
-app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (req, res, next) => {
+app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
     const serviceId = req.params.id;
-    const { title, eventType, startsAt, details = '', songIds = [] } = req.body || {};
+    const { title, eventType, startsAt, details = '' } = req.body || {};
+    const songIds = parseSongIds(req.body?.songIds ?? []);
     const startDate = typeof startsAt === 'string' ? new Date(startsAt) : null;
     const validTypes = ['Culto', 'Ensayo', 'Evento especial'];
     if (!/^[1-9]\d*$/.test(serviceId)
         || typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 120
         || !validTypes.includes(eventType)
         || !startDate || Number.isNaN(startDate.getTime())
-        || typeof details !== 'string' || details.length > 2000) {
-        res.status(400).json({ success: false, message: 'Revisa el nombre, tipo, fecha y detalles del evento.' });
+        || typeof details !== 'string' || details.length > 2000
+        || !Array.isArray(songIds)
+        || (req.file && (!req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)))) {
+        res.status(400).json({ success: false, message: 'Revisa el nombre, tipo, fecha, detalles, cantos e imagen del evento.' });
         return;
     }
 
@@ -745,10 +834,17 @@ app.patch('/api/services/:id', getAuthenticatedUser, requireCoordinator, async (
         await validateSongIds(songIds);
         const result = await pool.query(
             `UPDATE service_events
-             SET title = $1, event_type = $2, starts_at = $3, details = $4
-             WHERE id = $5
+             SET title = $1, event_type = $2, starts_at = $3, details = $4,
+                 image_data = COALESCE($5, image_data),
+                 image_mime_type = COALESCE($6, image_mime_type),
+                 image_url = CASE WHEN $5::BYTEA IS NOT NULL THEN NULL ELSE image_url END
+             WHERE id = $7
              RETURNING id, title, event_type, starts_at, details`,
-            [title.trim(), eventType, startDate.toISOString(), details.trim(), serviceId]
+            [
+                title.trim(), eventType, startDate.toISOString(), details.trim(),
+                req.file?.buffer || null, req.file?.mimetype || null,
+                serviceId
+            ]
         );
         if (!result.rows[0]) {
             res.status(404).json({ success: false, message: 'No se encontró ese culto o evento.' });
@@ -1079,10 +1175,15 @@ app.patch('/api/services/:serviceId/attendance', getAuthenticatedUser, async (re
 
 app.get('/api/announcements', getAuthenticatedUser, async (_req, res, next) => {
     try {
+        await deleteExpiredAnnouncements();
         const result = await pool.query(
-            `SELECT id, title, body, image_url, created_at
+            `SELECT id, title, body, image_url,
+                    (image_data IS NOT NULL OR image_url IS NOT NULL) AS has_image,
+                    expires_on, created_at
              FROM announcements
              WHERE published = TRUE
+               AND (expires_on IS NULL
+                    OR expires_on >= (NOW() AT TIME ZONE 'America/Monterrey')::date)
              ORDER BY created_at DESC
              LIMIT 100`
         );
@@ -1092,28 +1193,47 @@ app.get('/api/announcements', getAuthenticatedUser, async (_req, res, next) => {
     }
 });
 
-app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
-    const { title, body } = req.body || {};
-    if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
-        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000
-        || (req.file && !req.file.mimetype.startsWith('image/'))) {
-        res.status(400).json({ success: false, message: 'Revisa el título, contenido e imagen del anuncio.' });
+app.get('/api/announcements/:id/image', getAuthenticatedUser, async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El anuncio no es válido.' });
         return;
     }
-    let uploadedFile;
-    let recordSaved = false;
     try {
-        uploadedFile = req.file ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
-        const imageUrl = uploadedFile
-            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
-            : null;
         const result = await pool.query(
-            `INSERT INTO announcements (title, body, image_url, image_drive_file_id, created_by)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, title, body, image_url, created_at`,
-            [title.trim(), body.trim(), imageUrl, uploadedFile?.id || null, req.auth.sub]
+            `SELECT image_data AS file_data, image_mime_type AS mime_type
+             FROM announcements
+             WHERE id = $1 AND published = TRUE
+               AND (expires_on IS NULL
+                    OR expires_on >= (NOW() AT TIME ZONE 'America/Monterrey')::date)`,
+            [req.params.id]
         );
-        recordSaved = true;
+        sendPrivateFile(res, result.rows[0]);
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
+    const { title, body, expiresOn } = req.body || {};
+    if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
+        || typeof body !== 'string' || !body.trim() || body.trim().length > 4000
+        || !isValidDateOnly(expiresOn) || expiresOn < getMexicoDateString()
+        || (req.file && (!req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)))) {
+        res.status(400).json({ success: false, message: 'Revisa el título, contenido, fecha de fin e imagen del anuncio.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO announcements (
+                 title, body, image_data, image_mime_type, expires_on, created_by
+             )
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, title, body, expires_on, created_at`,
+            [
+                title.trim(), body.trim(), req.file?.buffer || null, req.file?.mimetype || null,
+                expiresOn, req.auth.sub
+            ]
+        );
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'announcement.created', 'announcement', $2)`,
@@ -1121,28 +1241,20 @@ app.post('/api/announcements', getAuthenticatedUser, requireCoordinator, parseUp
         );
         res.status(201).json({ success: true, announcement: result.rows[0] });
     } catch (error) {
-        if (uploadedFile?.id && !recordSaved) {
-            try {
-                await deleteDriveFile(uploadedFile.id);
-            } catch (cleanupError) {
-                console.error('No se pudo limpiar la imagen del anuncio tras un error:', cleanupError);
-            }
-        }
         next(error);
     }
 });
 
 app.patch('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, parseUpload(upload.single('image')), async (req, res, next) => {
-    const { title, body } = req.body || {};
+    const { title, body, expiresOn } = req.body || {};
     if (!/^[1-9]\d*$/.test(req.params.id)
         || typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
         || typeof body !== 'string' || !body.trim() || body.trim().length > 4000
-        || (req.file && !req.file.mimetype.startsWith('image/'))) {
-        res.status(400).json({ success: false, message: 'Revisa el título, contenido e imagen del anuncio.' });
+        || !isValidDateOnly(expiresOn) || expiresOn < getMexicoDateString()
+        || (req.file && (!req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)))) {
+        res.status(400).json({ success: false, message: 'Revisa el título, contenido, fecha de fin e imagen del anuncio.' });
         return;
     }
-    let uploadedFile;
-    let recordSaved = false;
     try {
         const previous = await pool.query(
             'SELECT image_drive_file_id FROM announcements WHERE id = $1',
@@ -1152,31 +1264,31 @@ app.patch('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, pa
             res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
             return;
         }
-        uploadedFile = req.file ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
-        const imageUrl = uploadedFile
-            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
-            : null;
         const result = await pool.query(
             `UPDATE announcements
              SET title = $1, body = $2,
-                 image_url = COALESCE($3, image_url),
-                 image_drive_file_id = COALESCE($4, image_drive_file_id)
-             WHERE id = $5
+                  image_url = CASE WHEN $3::BYTEA IS NOT NULL THEN NULL ELSE image_url END,
+                  image_data = COALESCE($3, image_data),
+                  image_mime_type = COALESCE($4, image_mime_type),
+                  image_drive_file_id = CASE WHEN $3::BYTEA IS NOT NULL THEN NULL ELSE image_drive_file_id END,
+                  expires_on = $5
+             WHERE id = $6
              RETURNING id`,
-            [title.trim(), body.trim(), imageUrl, uploadedFile?.id || null, req.params.id]
+            [
+                 title.trim(), body.trim(), req.file?.buffer || null, req.file?.mimetype || null,
+                 expiresOn, req.params.id
+            ]
         );
         if (!result.rowCount) {
-            if (uploadedFile?.id) await deleteDriveFile(uploadedFile.id);
             res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
             return;
         }
-        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'announcement.updated', 'announcement', $2)`,
             [req.auth.sub, req.params.id]
         );
-        if (uploadedFile && previous.rows[0].image_drive_file_id) {
+        if (req.file && previous.rows[0].image_drive_file_id) {
             try {
                 await deleteDriveFile(previous.rows[0].image_drive_file_id);
             } catch (cleanupError) {
@@ -1185,13 +1297,6 @@ app.patch('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, pa
         }
         res.json({ success: true });
     } catch (error) {
-        if (uploadedFile?.id && !recordSaved) {
-            try {
-                await deleteDriveFile(uploadedFile.id);
-            } catch (cleanupError) {
-                console.error('No se pudo limpiar la imagen del anuncio tras un error:', cleanupError);
-            }
-        }
         next(error);
     }
 });
@@ -1210,8 +1315,10 @@ app.delete('/api/announcements/:id', getAuthenticatedUser, requireCoordinator, a
             res.status(404).json({ success: false, message: 'No se encontró ese anuncio.' });
             return;
         }
-        if (existing.rows[0].image_drive_file_id) {
+        if (existing.rows[0].image_drive_file_id && isDriveConfigured()) {
             await deleteDriveFile(existing.rows[0].image_drive_file_id);
+        } else if (existing.rows[0].image_drive_file_id) {
+            console.warn(`El anuncio ${req.params.id} tenía una imagen anterior en Drive; no hay credenciales para eliminarla.`);
         }
         const result = await pool.query(
             'DELETE FROM announcements WHERE id = $1 RETURNING id',
@@ -1436,9 +1543,29 @@ app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), asyn
 app.get('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
-            'SELECT id, title, category, url, drive_file_id, description FROM media_resources ORDER BY category, title LIMIT 200'
+            `SELECT id, title, category, url, drive_file_id, description,
+                    (file_data IS NOT NULL) AS has_file_data
+             FROM media_resources
+             ORDER BY category, title
+             LIMIT 200`
         );
         res.json({ success: true, resources: result.rows });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/api/resources/:id/content', getAuthenticatedUser, requireAreas([2, 3, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El recurso no es válido.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            'SELECT file_data, mime_type FROM media_resources WHERE id = $1',
+            [req.params.id]
+        );
+        sendPrivateFile(res, result.rows[0]);
     } catch (error) {
         next(error);
     }
@@ -1448,7 +1575,7 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
     const { title, category, description = '' } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
         || typeof category !== 'string' || !['Imagen', 'Video', 'Logo', 'Banner', 'Otro'].includes(category)
-        || !req.file || !req.file.mimetype.startsWith('image/')
+        || !req.file || !req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)
         || typeof description !== 'string' || description.length > 500) {
         res.status(400).json({ success: false, message: 'Selecciona una imagen e ingresa un nombre y categoría válidos.' });
         return;
@@ -1456,14 +1583,21 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
     let uploadedFile;
     let recordSaved = false;
     try {
-        uploadedFile = await uploadToDrive(req.file, mediaDriveFolderId);
-        const resourceUrl = uploadedFile.thumbnailLink
-            || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`;
+        uploadedFile = isDriveConfigured() ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
+        const resourceUrl = uploadedFile
+            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
+            : '';
         const result = await pool.query(
-            `INSERT INTO media_resources (title, category, url, drive_file_id, description, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO media_resources (
+                 title, category, url, drive_file_id, file_data, mime_type, description, created_by
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING id, title, category, url, description`,
-            [title.trim(), category, resourceUrl, uploadedFile.id, description.trim(), req.auth.sub]
+            [
+                title.trim(), category, resourceUrl, uploadedFile?.id || null,
+                uploadedFile ? null : req.file.buffer, uploadedFile ? null : req.file.mimetype,
+                description.trim(), req.auth.sub
+            ]
         );
         recordSaved = true;
         await pool.query(
@@ -1471,7 +1605,11 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
              VALUES ($1, 'resource.created', 'media_resource', $2)`,
             [req.auth.sub, result.rows[0].id]
         );
-        res.status(201).json({ success: true, resource: result.rows[0] });
+        res.status(201).json({
+            success: true,
+            storage: uploadedFile ? 'drive' : 'database',
+            resource: result.rows[0]
+        });
     } catch (error) {
         if (uploadedFile?.id && !recordSaved) {
             try {
@@ -1560,7 +1698,8 @@ app.post('/api/monitor-notes', getAuthenticatedUser, requireAreas([2, 4, 5]), as
 app.get('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
-            `SELECT f.id, f.title, f.url, f.mime_type, f.created_at, u.nombre AS uploader
+            `SELECT f.id, f.title, f.url, f.mime_type, f.created_at, u.nombre AS uploader,
+                    (f.file_data IS NOT NULL) AS has_file_data
              FROM sound_files f
              JOIN users u ON u.id = f.uploaded_by
              ORDER BY f.created_at DESC
@@ -1572,24 +1711,44 @@ app.get('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), async
     }
 });
 
+app.get('/api/sound-files/:id/content', getAuthenticatedUser, requireAreas([2, 4, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El archivo no es válido.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            'SELECT file_data, mime_type FROM sound_files WHERE id = $1',
+            [req.params.id]
+        );
+        sendPrivateFile(res, result.rows[0]);
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.post('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), parseUpload(upload.single('file')), async (req, res, next) => {
     const title = req.body?.title;
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
-        || !req.file || req.file.mimetype.startsWith('image/')) {
+        || !req.file || req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)) {
         res.status(400).json({ success: false, message: 'Selecciona un manual PDF, Word o PowerPoint y escribe su nombre.' });
         return;
     }
     let uploadedFile;
     let recordSaved = false;
     try {
-        uploadedFile = await uploadToDrive(req.file, soundDriveFolderId);
-        const url = uploadedFile.webViewLink
-            || `https://drive.google.com/file/d/${encodeURIComponent(uploadedFile.id)}/view`;
+        uploadedFile = isDriveConfigured() ? await uploadToDrive(req.file, soundDriveFolderId) : null;
+        const url = uploadedFile
+            ? uploadedFile.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(uploadedFile.id)}/view`
+            : '';
         const result = await pool.query(
-            `INSERT INTO sound_files (title, drive_file_id, url, mime_type, uploaded_by)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO sound_files (title, drive_file_id, url, mime_type, file_data, uploaded_by)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, title, drive_file_id, url, mime_type, created_at`,
-            [title.trim(), uploadedFile.id, url, req.file.mimetype, req.auth.sub]
+            [
+                title.trim(), uploadedFile?.id || null, url, req.file.mimetype,
+                uploadedFile ? null : req.file.buffer, req.auth.sub
+            ]
         );
         recordSaved = true;
         await pool.query(
@@ -1597,7 +1756,11 @@ app.post('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), pars
              VALUES ($1, 'sound.manual.uploaded', 'sound_file', $2)`,
             [req.auth.sub, result.rows[0].id]
         );
-        res.status(201).json({ success: true, file: result.rows[0] });
+        res.status(201).json({
+            success: true,
+            storage: uploadedFile ? 'drive' : 'database',
+            file: result.rows[0]
+        });
     } catch (error) {
         if (uploadedFile?.id && !recordSaved) {
             try {
@@ -1634,17 +1797,34 @@ app.delete('/api/sound-files/:id', getAuthenticatedUser, requireAreas([2, 4, 5])
     }
 });
 
-app.get('/api/admin/audit-logs', getAuthenticatedUser, requireMaster, async (_req, res, next) => {
+app.get('/api/admin/audit-logs', getAuthenticatedUser, requireMaster, async (req, res, next) => {
+    const page = Number(req.query.page || 1);
+    if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
+        res.status(400).json({ success: false, message: 'La página de auditoría no es válida.' });
+        return;
+    }
     try {
-        const result = await pool.query(
+        const [result, countResult] = await Promise.all([
+            pool.query(
             `SELECT l.id, l.action, l.target_type, l.target_id, l.details, l.created_at,
                     u.nombre AS actor_name
              FROM audit_logs l
              LEFT JOIN users u ON u.id = l.actor_id
-             ORDER BY l.created_at DESC
-             LIMIT 100`
-        );
-        res.json({ success: true, logs: result.rows });
+             ORDER BY l.created_at DESC, l.id DESC
+             LIMIT 10 OFFSET $1`,
+            [(page - 1) * 10]
+            ),
+            pool.query('SELECT COUNT(*)::int AS total FROM audit_logs')
+        ]);
+        const total = countResult.rows[0].total;
+        res.json({
+            success: true,
+            logs: result.rows,
+            page,
+            pageSize: 10,
+            total,
+            pageCount: Math.ceil(total / 10)
+        });
     } catch (error) {
         next(error);
     }
@@ -1893,9 +2073,18 @@ async function startServer() {
             event_type VARCHAR(30) NOT NULL,
             starts_at TIMESTAMPTZ NOT NULL,
             details TEXT NOT NULL DEFAULT '',
+            image_url TEXT,
+            image_data BYTEA,
+            image_mime_type VARCHAR(100),
             created_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+    `);
+    await pool.query(`
+        ALTER TABLE service_events
+        ADD COLUMN IF NOT EXISTS image_url TEXT,
+        ADD COLUMN IF NOT EXISTS image_data BYTEA,
+        ADD COLUMN IF NOT EXISTS image_mime_type VARCHAR(100)
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS service_assignments (
@@ -1941,6 +2130,9 @@ async function startServer() {
             body TEXT NOT NULL,
             image_url TEXT,
             image_drive_file_id VARCHAR(100),
+            image_data BYTEA,
+            image_mime_type VARCHAR(100),
+            expires_on DATE,
             published BOOLEAN NOT NULL DEFAULT TRUE,
             created_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1949,7 +2141,10 @@ async function startServer() {
     await pool.query(`
         ALTER TABLE announcements
         ADD COLUMN IF NOT EXISTS image_url TEXT,
-        ADD COLUMN IF NOT EXISTS image_drive_file_id VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS image_drive_file_id VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS image_data BYTEA,
+        ADD COLUMN IF NOT EXISTS image_mime_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS expires_on DATE
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS prayer_requests (
@@ -2031,6 +2226,8 @@ async function startServer() {
             category VARCHAR(20) NOT NULL,
             url TEXT NOT NULL,
             drive_file_id VARCHAR(100),
+            file_data BYTEA,
+            mime_type VARCHAR(100),
             description VARCHAR(500) NOT NULL DEFAULT '',
             created_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2038,7 +2235,9 @@ async function startServer() {
     `);
     await pool.query(`
         ALTER TABLE media_resources
-        ADD COLUMN IF NOT EXISTS drive_file_id VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS drive_file_id VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS file_data BYTEA,
+        ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100)
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS sound_files (
@@ -2047,9 +2246,15 @@ async function startServer() {
             drive_file_id VARCHAR(100) NOT NULL,
             url TEXT NOT NULL,
             mime_type VARCHAR(150) NOT NULL,
+            file_data BYTEA,
             uploaded_by BIGINT NOT NULL REFERENCES users(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+    `);
+    await pool.query(`
+        ALTER TABLE sound_files
+        ALTER COLUMN drive_file_id DROP NOT NULL,
+        ADD COLUMN IF NOT EXISTS file_data BYTEA
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS monitor_notes (
@@ -2108,6 +2313,7 @@ async function startServer() {
            AND (e.starts_at AT TIME ZONE 'America/Mexico_City')::date
                < (NOW() AT TIME ZONE 'America/Mexico_City')::date`
     );
+    await deleteExpiredAnnouncements();
     const assignmentCleanup = setInterval(() => {
         pool.query(
             `DELETE FROM service_assignments a
@@ -2118,6 +2324,12 @@ async function startServer() {
         ).catch((error) => console.error('No se pudieron limpiar asignaciones vencidas:', error));
     }, 15 * 60 * 1000);
     assignmentCleanup.unref();
+    const announcementCleanup = setInterval(() => {
+        deleteExpiredAnnouncements().catch((error) =>
+            console.error('No se pudieron limpiar anuncios vencidos:', error)
+        );
+    }, 60 * 60 * 1000);
+    announcementCleanup.unref();
 
     app.listen(port, () => {
         console.log(`API de Mi Iglesia disponible en el puerto ${port}.`);

@@ -353,6 +353,10 @@
         .song-picker-option input { width:16px; height:16px; flex:0 0 auto; margin:0; accent-color:var(--blue); }
         .song-picker-empty { margin:0 !important; padding:10px; color:var(--muted); font-size:13px; }
         .feed-image { display:block; max-width:min(100%,520px); max-height:320px; margin-top:10px; border-radius:10px; object-fit:contain; }
+        .audit-pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; }
+        .audit-pagination button { min-height:36px; padding:0 13px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--navy); font:inherit; font-weight:700; cursor:pointer; }
+        .audit-pagination button:disabled { opacity:.45; cursor:not-allowed; }
+        .audit-page-status { color:var(--muted); font-size:13px; }
         .pending-dialog { width:min(92vw,620px); max-height:min(82vh,760px); overflow:auto; border:1px solid rgba(255,255,255,.82); border-radius:22px; padding:0; color:var(--ink); box-shadow:0 28px 90px rgba(0,14,41,.32); }
         .pending-dialog::backdrop { background:rgba(0,10,30,.62); backdrop-filter:blur(5px); }
         .pending-dialog-content { padding:clamp(22px,5vw,34px); }
@@ -692,7 +696,7 @@
             <button class="menu-link" type="button" data-view="home" aria-current="page">Inicio</button>
             <button class="menu-link" type="button" data-view="services">Eventos y cultos</button>
             <button class="menu-link" type="button" data-view="prayers">Peticiones de oración</button>
-            <button class="menu-link" type="button" data-view="profile">Mi perfil</button>
+            <button class="menu-link" type="button" data-view="profile">Mi cuenta</button>
             <button class="menu-link" type="button" data-view="coordination" hidden>Coordinación <span id="pendingPrayerBadge" class="notification-count" hidden>0</span></button>
             <button class="menu-link" type="button" data-view="songs" hidden>Repertorio</button>
             <button class="menu-link" type="button" data-view="media" hidden>Multimedia</button>
@@ -778,6 +782,9 @@
                 </label>
                 <label class="form-field full">Contenido
                     <textarea name="body" maxlength="4000" required></textarea>
+                </label>
+                <label class="form-field">Mostrar hasta
+                    <input name="expiresOn" type="date" required>
                 </label>
                 <label class="form-field full">Imagen opcional
                     <input name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
@@ -915,6 +922,9 @@
                         <label class="form-field full">Detalles
                             <textarea name="details" maxlength="2000"></textarea>
                         </label>
+                        <label class="form-field full">Imagen para el anuncio del evento (opcional)
+                            <input name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+                        </label>
                         <div class="form-field full">
                             <span>Buscar y seleccionar cantos del servicio</span>
                             <input class="song-picker-search" id="serviceSongSearch" type="search" placeholder="Escribe el nombre o autor del canto…" autocomplete="off">
@@ -984,6 +994,7 @@
             <p class="status" id="systemStatus" role="status" aria-live="polite">Verificando el API y la base de datos…</p>
             <h3>Registro de auditoría</h3>
             <div class="audit-list" id="auditList"></div>
+            <nav class="audit-pagination" id="auditPagination" aria-label="Páginas del registro de auditoría"></nav>
         </section>
 
         <section class="panel admin-panel" id="adminPanel" data-view-section="admin" hidden>
@@ -1069,6 +1080,13 @@
         const selectedServiceSongIds = new Set();
         const songsPerPage = 10;
         const positionSelect = document.querySelector('#assignmentForm [name="position"]');
+        document.querySelector('#announcementForm [name="expiresOn"]').min =
+            new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Monterrey',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(new Date());
         servicePositions.forEach((position) => {
             const option = document.createElement('option');
             option.value = position;
@@ -1379,6 +1397,15 @@
                 card.className = 'service-card';
                 addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
                 addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
+                if (service.has_image || service.image_url) {
+                    const image = document.createElement('img');
+                    image.className = 'feed-image';
+                    image.alt = `Imagen de ${service.title}`;
+                    image.loading = 'lazy';
+                    if (service.image_url) image.src = service.image_url;
+                    else loadPrivateImage(image, `/api/services/${encodeURIComponent(service.id)}/image`);
+                    card.appendChild(image);
+                }
                 if (service.details) addTextElement(card, 'p', 'service-details', service.details);
                 if (service.songs?.length) {
                     addTextElement(
@@ -1436,6 +1463,15 @@
                 card.className = 'service-card';
                 addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
                 addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
+                if (service.has_image || service.image_url) {
+                    const image = document.createElement('img');
+                    image.className = 'feed-image';
+                    image.alt = `Imagen de ${service.title}`;
+                    image.loading = 'lazy';
+                    if (service.image_url) image.src = service.image_url;
+                    else loadPrivateImage(image, `/api/services/${encodeURIComponent(service.id)}/image`);
+                    card.appendChild(image);
+                }
                 if (service.details) addTextElement(card, 'p', 'service-details', service.details);
                 if (service.songs?.length) {
                     addTextElement(
@@ -1461,6 +1497,7 @@
                         date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
                         form.elements.startsAt.value = date.toISOString().slice(0, 16);
                         form.elements.details.value = service.details || '';
+                        form.elements.image.value = '';
                         selectedServiceSongIds.clear();
                         (service.songs || []).forEach((song) => selectedServiceSongIds.add(String(song.id)));
                         document.getElementById('serviceSongSearch').value = '';
@@ -1595,7 +1632,10 @@
         document.getElementById('directorySearch').addEventListener('input', renderDirectory);
 
         async function loadAuditLogs() {
-            const { logs } = await MiIglesia.request('/api/admin/audit-logs');
+            const page = Number(document.getElementById('auditPagination').dataset.page || 1);
+            const { logs, page: currentPage, pageCount } = await MiIglesia.request(
+                `/api/admin/audit-logs?page=${encodeURIComponent(page)}`
+            );
             const auditList = document.getElementById('auditList');
             auditList.replaceChildren();
             logs.forEach((log) => {
@@ -1606,6 +1646,29 @@
                 auditList.appendChild(row);
             });
             if (!logs.length) addTextElement(auditList, 'p', 'empty-state', 'Aún no hay acciones registradas.');
+            const pagination = document.getElementById('auditPagination');
+            pagination.replaceChildren();
+            pagination.dataset.page = String(currentPage);
+            const previous = addTextElement(pagination, 'button', '', 'Anterior');
+            previous.type = 'button';
+            previous.disabled = currentPage <= 1;
+            previous.addEventListener('click', () => {
+                pagination.dataset.page = String(currentPage - 1);
+                loadAuditLogs().catch((error) => {
+                    document.getElementById('adminStatus').textContent = error.message;
+                });
+            });
+            addTextElement(pagination, 'span', 'audit-page-status',
+                pageCount ? `Página ${currentPage} de ${pageCount}` : 'Sin registros');
+            const next = addTextElement(pagination, 'button', '', 'Siguiente');
+            next.type = 'button';
+            next.disabled = currentPage >= pageCount;
+            next.addEventListener('click', () => {
+                pagination.dataset.page = String(currentPage + 1);
+                loadAuditLogs().catch((error) => {
+                    document.getElementById('adminStatus').textContent = error.message;
+                });
+            });
         }
 
         async function loadSystemStatus() {
@@ -1634,15 +1697,25 @@
                 card.className = 'feed-card';
                 addTextElement(card, 'h3', '', announcement.title);
                 addTextElement(card, 'p', '', announcement.body);
-                if (announcement.image_url) {
+                if (announcement.has_image || announcement.image_url) {
                     const image = document.createElement('img');
                     image.className = 'feed-image';
-                    image.src = announcement.image_url;
                     image.alt = `Imagen del anuncio ${announcement.title}`;
                     image.loading = 'lazy';
+                    if (announcement.image_url) image.src = announcement.image_url;
+                    else loadPrivateImage(image, `/api/announcements/${encodeURIComponent(announcement.id)}/image`);
                     card.appendChild(image);
                 }
-                addTextElement(card, 'div', 'feed-meta', formatServiceDate(announcement.created_at));
+                const expiryDate = announcement.expires_on
+                    ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeZone: 'UTC' })
+                        .format(new Date(`${announcement.expires_on}T00:00:00.000Z`))
+                    : null;
+                addTextElement(
+                    card,
+                    'div',
+                    'feed-meta',
+                    `Publicado ${formatServiceDate(announcement.created_at)}${expiryDate ? ` · Vigente hasta ${expiryDate}` : ''}`
+                );
                 if (canManageCommunity) {
                     const actions = document.createElement('div');
                     actions.className = 'inline-actions';
@@ -1654,6 +1727,8 @@
                         form.elements.announcementId.value = String(announcement.id);
                         form.elements.title.value = announcement.title;
                         form.elements.body.value = announcement.body;
+                        form.elements.expiresOn.value = announcement.expires_on || '';
+                        form.elements.image.value = '';
                         form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
                         document.getElementById('cancelAnnouncementEdit').hidden = false;
                     });
@@ -1770,11 +1845,61 @@
         }
 
         function addExternalLink(parent, label, url) {
-            if (!url) return;
+            if (!url) return null;
             const link = addTextElement(parent, 'a', 'text-link', label);
             link.href = url;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
+            return link;
+        }
+
+        function loadPrivateImage(image, path) {
+            const load = async () => {
+                try {
+                    const blob = await MiIglesia.requestBlob(path);
+                    const objectUrl = URL.createObjectURL(blob);
+                    image.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+                    image.addEventListener('error', () => URL.revokeObjectURL(objectUrl), { once: true });
+                    image.src = objectUrl;
+                } catch (error) {
+                    console.error('No se pudo cargar una imagen guardada:', error);
+                    image.alt = `${image.alt} (no se pudo cargar)`;
+                }
+            };
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries.some((entry) => entry.isIntersecting)) {
+                        observer.disconnect();
+                        load();
+                    }
+                });
+                observer.observe(image);
+            } else {
+                load();
+            }
+        }
+
+        function addProtectedDownload(parent, label, path, filename) {
+            const link = addTextElement(parent, 'a', 'text-link', label);
+            link.href = '#';
+            link.addEventListener('click', async (event) => {
+                event.preventDefault();
+                link.textContent = 'Preparando descarga…';
+                try {
+                    const blob = await MiIglesia.requestBlob(path);
+                    const objectUrl = URL.createObjectURL(blob);
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = objectUrl;
+                    downloadLink.download = filename;
+                    downloadLink.click();
+                    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                    link.textContent = label;
+                } catch (error) {
+                    link.textContent = `No se pudo descargar: ${error.message}`;
+                    console.error('No se pudo descargar un archivo guardado:', error);
+                }
+            });
+            return link;
         }
 
         function renderSongTable() {
@@ -1923,14 +2048,24 @@
                 addTextElement(card, 'h3', '', resource.title);
                 addTextElement(card, 'div', 'feed-meta', resource.category);
                 if (resource.description) addTextElement(card, 'p', '', resource.description);
-                if (resource.drive_file_id && resource.url) {
+                if (resource.has_file_data || resource.drive_file_id) {
                     const image = document.createElement('img');
                     image.className = 'feed-image';
-                    image.src = resource.url;
                     image.alt = resource.title;
                     image.loading = 'lazy';
+                    if (resource.drive_file_id) image.src = resource.url;
+                    else loadPrivateImage(image, `/api/resources/${encodeURIComponent(resource.id)}/content`);
                     card.appendChild(image);
-                    addExternalLink(card, 'Abrir en Google Drive', resource.url);
+                    if (resource.drive_file_id) {
+                        addExternalLink(card, 'Abrir en Google Drive', resource.url);
+                    } else {
+                        addProtectedDownload(
+                            card,
+                            'Descargar imagen',
+                            `/api/resources/${encodeURIComponent(resource.id)}/content`,
+                            resource.title
+                        );
+                    }
                 } else addExternalLink(card, 'Abrir recurso', resource.url);
                 if (currentUserAreas.some((area) => [2, 3, 5].includes(area))) {
                     const remove = addTextElement(card, 'button', 'remove-assignment', 'Eliminar enlace');
@@ -1956,7 +2091,14 @@
             files.forEach((file) => {
                 const card = document.createElement('article');
                 card.className = 'feed-card';
-                addExternalLink(card, file.title, file.url);
+                if (file.has_file_data) {
+                    addProtectedDownload(
+                        card,
+                        'Descargar manual',
+                        `/api/sound-files/${encodeURIComponent(file.id)}/content`,
+                        file.title
+                    );
+                } else addExternalLink(card, file.title, file.url);
                 addTextElement(card, 'div', 'feed-meta',
                     `${file.uploader} · ${formatServiceDate(file.created_at)}`);
                 if (currentUserAreas.some((area) => [2, 4, 5].includes(area))) {
@@ -2000,18 +2142,20 @@
             button.disabled = true;
             servicesStatus.textContent = '';
             try {
+                const payload = new FormData();
+                payload.set('title', String(data.get('title')).trim());
+                payload.set('eventType', String(data.get('eventType')));
+                payload.set('startsAt', new Date(data.get('startsAt')).toISOString());
+                payload.set('details', String(data.get('details') || '').trim());
+                payload.set('songIds', JSON.stringify([...selectedServiceSongIds]));
+                const image = form.elements.image.files[0];
+                if (image) payload.set('image', image);
             await MiIglesia.request(
                 serviceId ? `/api/services/${encodeURIComponent(serviceId)}` : '/api/services',
                 {
                 method: serviceId ? 'PATCH' : 'POST',
-                body: JSON.stringify({
-                    title: String(data.get('title')).trim(),
-                    eventType: data.get('eventType'),
-                        startsAt: new Date(data.get('startsAt')).toISOString(),
-                        details: String(data.get('details') || '').trim(),
-                        songIds: [...selectedServiceSongIds]
-                    })
-                    }
+                body: payload
+                }
                 );
                 form.reset();
                 selectedServiceSongIds.clear();
@@ -2203,6 +2347,7 @@
                         const payload = new FormData();
                         payload.set('title', String(data.get('title') || ''));
                         payload.set('body', String(data.get('body') || ''));
+                        payload.set('expiresOn', String(data.get('expiresOn') || ''));
                         const image = form.elements.image.files[0];
                         if (image) payload.set('image', image);
                         return {
@@ -2292,7 +2437,10 @@
                     body: payload
                 });
                 form.reset();
-                document.getElementById('resourceStatus').textContent = 'Imagen subida al banco de recursos de Drive.';
+                document.getElementById('resourceStatus').textContent =
+                    result.storage === 'drive'
+                        ? 'Imagen subida al banco de recursos de Drive.'
+                        : 'Drive no está configurado; la imagen se guardó en la base de datos temporalmente.';
                 await loadResources();
             } catch (error) {
                 document.getElementById('resourceStatus').textContent = error.message;
@@ -2307,12 +2455,15 @@
             const button = form.querySelector('button[type="submit"]');
             button.disabled = true;
             try {
-                await MiIglesia.request('/api/sound-files', {
+                const result = await MiIglesia.request('/api/sound-files', {
                     method: 'POST',
                     body: new FormData(form)
                 });
                 form.reset();
-                document.getElementById('soundFileStatus').textContent = 'Manual subido a Drive.';
+                document.getElementById('soundFileStatus').textContent =
+                    result.storage === 'drive'
+                        ? 'Manual subido a Drive.'
+                        : 'Drive no está configurado; el manual se guardó en la base de datos temporalmente.';
                 await loadSoundFiles();
             } catch (error) {
                 document.getElementById('soundFileStatus').textContent = error.message;

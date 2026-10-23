@@ -29,7 +29,9 @@ Las peticiones de oración quedan pendientes hasta que Master o Coordinación la
 
 El perfil exige calle, colonia y número de casa para desbloquear el resto del menú. El directorio de Coordinación se divide en Grupo de alabanza (roles Master, Músico, Coordinador, Sonido o Multimedia) e Iglesia general, con búsqueda por nombre.
 
-Las imágenes de anuncios y Multimedia, así como los manuales de Sonido, se suben a las carpetas de Drive configuradas y tienen un límite de 10 MB. Para habilitar las subidas, configura `GOOGLE_SERVICE_ACCOUNT_JSON` como secreto de entorno en Render con el JSON de una cuenta de servicio. Comparte ambas carpetas de Drive con el correo de esa cuenta y dale permiso de editor. Carpetas: Multimedia `1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh`; Sonido `1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP`. Nunca agregues las credenciales de la cuenta de servicio al repositorio.
+Las imágenes de anuncios y de eventos se guardan en PostgreSQL. Los anuncios requieren una fecha de fin; siguen visibles durante ese día y se eliminan junto con su imagen a partir del día siguiente (zona horaria `America/Monterrey`). La limpieza corre al iniciar el API, cada hora y antes de listar anuncios.
+
+Multimedia y Sonido usan Google Drive cuando `GOOGLE_SERVICE_ACCOUNT_JSON` está configurada; si no lo está, la carga se guarda en PostgreSQL como alternativa para que no quede bloqueada. Los archivos tienen un límite de 10 MB y se borran de su almacenamiento al eliminarlos desde la app. Para habilitar Drive, configura `GOOGLE_SERVICE_ACCOUNT_JSON` como secreto de entorno en Render con el JSON de una cuenta de servicio. Comparte ambas carpetas de Drive con el correo de esa cuenta y dale permiso de editor. Carpetas: Multimedia `1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh`; Sonido `1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP`. Nunca agregues las credenciales de la cuenta de servicio al repositorio. Los registros de auditoría de Administración se muestran paginados, diez por página.
 
 Cada persona puede actualizar sus propios datos y cambiar su contraseña confirmando la contraseña actual. La API no entrega contraseñas ni secretos técnicos.
 

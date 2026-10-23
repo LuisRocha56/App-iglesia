@@ -28,6 +28,22 @@
 
             return result;
         },
+        async requestBlob(path) {
+            const headers = new Headers();
+            const token = localStorage.getItem(tokenKey);
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+
+            const response = await fetch(`${apiBaseUrl}${path}`, { headers });
+            if (!response.ok) {
+                const result = await response.json();
+                const error = new Error(result.message || 'No se pudo descargar el archivo.');
+                error.status = response.status;
+                throw error;
+            }
+            return response.blob();
+        },
         saveToken(token) {
             localStorage.setItem(tokenKey, token);
         },
