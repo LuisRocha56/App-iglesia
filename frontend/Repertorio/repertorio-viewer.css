@@ -625,36 +625,206 @@
     }
 }
 
-/* ADAPTACIÓN MÓVIL (PANTALLAS PEQUEÑAS < 800px) */
-@media (max-width: 800px) {
-    .song-reader { 
-        grid-template-columns: 1fr; 
+/* Elementos exclusivos de móvil/tableta: ocultos en escritorio */
+.song-reader-sheet-head,
+.song-reader-backdrop,
+.song-reader-topbar,
+.song-reader-mobilebar { display: none; }
+
+/* MENÚ PARA SMARTPHONES Y TABLETS (≤ 1024px): barra inferior + panel deslizable desde abajo */
+@media (max-width: 1024px) {
+    .song-reader {
+        grid-template-columns: 1fr;
     }
-    .song-reader-sidebar {
+
+    .song-reader-main {
         position: absolute;
-        z-index: 50;
-        inset: 0 auto 0 0;
-        width: min(88vw, 340px);
-        transform: translateX(-105%);
-        transition: transform 0.25s ease;
+        inset: 0;
+        padding-bottom: 76px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .song-reader-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(180, 205, 225, 0.15);
+        background: rgba(7, 24, 47, 0.96);
+        backdrop-filter: blur(8px);
+    }
+
+    .song-reader-topbar-title {
+        display: grid;
+        flex: 1;
+        min-width: 0;
+        line-height: 1.25;
+    }
+
+    .song-reader-topbar-title strong,
+    .song-reader-topbar-title span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .song-reader-topbar-title strong { font-size: 15px; }
+    .song-reader-topbar-title span { color: #9cb8d4; font-size: 12px; }
+
+    .song-reader-content { padding: 16px 16px 24px; }
+    .song-reader-heading { margin-bottom: 4px; }
+    .song-reader-heading h1,
+    .song-reader-heading p { display: none; }
+    .song-info-badge { margin-top: 0; }
+
+    .song-reader-icon-button { width: 46px; height: 46px; flex: none; }
+
+    /* Panel de opciones: sube desde abajo */
+    .song-reader-sidebar {
+        position: fixed;
+        inset: auto 0 0 0;
+        z-index: 120;
+        width: min(100%, 640px);
+        max-height: 86vh;
+        margin: 0 auto;
+        padding: 0 16px calc(20px + env(safe-area-inset-bottom));
+        border: 1px solid rgba(180, 205, 225, 0.18);
+        border-bottom: 0;
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.55);
+        transform: translateY(105%);
+        transition: transform 0.28s ease;
         overflow-x: hidden !important;
         overflow-y: auto !important;
+        overscroll-behavior: contain;
     }
-    .song-reader[data-menu-open="true"] .song-reader-sidebar { 
-        transform: translateX(0); 
+
+    .song-reader[data-menu-open="true"] .song-reader-sidebar { transform: translateY(0); }
+
+    .song-reader-sheet-head {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 -16px 12px;
+        padding: 16px 16px 8px;
+        background: inherit;
+        border-radius: 22px 22px 0 0;
     }
-    .song-reader-content { 
-        padding: 16px 18px 55px; 
+
+    .song-reader-sheet-head strong { font-size: 16px; }
+
+    .song-reader-sheet-grip {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 40px;
+        height: 4px;
+        transform: translateX(-50%);
+        border-radius: 2px;
+        background: rgba(180, 205, 225, 0.35);
     }
+
+    .song-reader-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 110;
+        display: block;
+        background: rgba(2, 8, 18, 0.55);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    .song-reader[data-menu-open="true"] .song-reader-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Opciones más grandes para el dedo; los submenús se abren dentro del panel */
+    .song-reader-menu-item { min-height: 54px; font-size: 15px; }
+    .song-reader-toolbar { margin-bottom: 14px; }
+    .song-reader-toolbar [data-action="close"] { display: none; }
     .song-reader-submenu {
         position: static;
         width: 100%;
-        margin-left: 0;
-        margin-top: 6px;
-        box-shadow: none;
+        margin: 0;
+        padding: 12px;
         border: 0;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0 0 14px 14px;
         background: rgba(5, 19, 38, 0.9);
-        border-radius: 0 0 12px 12px;
+        box-shadow: none;
+        animation: none;
     }
+    .options-grid { grid-template-columns: repeat(3, 1fr); }
+    .options-grid.full-width { grid-template-columns: 1fr; }
+    .option-btn, .tone-btn { min-height: 46px; font-size: 14px; }
+    .tone-controls { grid-template-columns: repeat(2, 1fr); }
+    .song-reader-search input { min-height: 48px; font-size: 16px; }
+    .song-reader-slider-body input[type="range"] { height: 32px; }
+
+    /* Barra inferior de acceso rápido */
+    .song-reader-mobilebar {
+        position: fixed;
+        inset: auto 0 0 0;
+        z-index: 100;
+        display: grid;
+        grid-template-columns: 56px 1fr 56px 1.4fr;
+        gap: 8px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(180, 205, 225, 0.18);
+        background: rgba(11, 33, 63, 0.97);
+        backdrop-filter: blur(8px);
+    }
+
+    .song-reader-mobilebar button {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.07);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .song-reader-mobilebar button:active { background: #1686d9; }
+    .song-reader-mobilebar .mobilebar-tone { flex-direction: column; gap: 0; line-height: 1.1; }
+    .song-reader-mobilebar .mobilebar-tone small { color: #9cb8d4; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+    .song-reader-mobilebar .mobilebar-tone strong { color: #f59a3c; font-size: 16px; }
+    .song-reader-mobilebar .mobilebar-menu { background: #1686d9; border-color: #38b6ff; }
+
+    .song-chord-popup { width: 170px; }
+}
+
+/* Teléfonos pequeños */
+@media (max-width: 480px) {
+    .options-grid { grid-template-columns: repeat(2, 1fr); }
+    .song-reader-sheet { font-size: 14px; }
+}
+
+/* Tema claro del menú móvil */
+.song-reader-light .song-reader-topbar { background: rgba(255, 255, 255, 0.96); border-bottom-color: rgba(18, 38, 63, 0.15); }
+.song-reader-light .song-reader-topbar-title span { color: #516a85; }
+.song-reader-light .song-reader-mobilebar { background: rgba(255, 255, 255, 0.97); border-top-color: rgba(18, 38, 63, 0.15); }
+.song-reader-light .song-reader-mobilebar button { border-color: rgba(18, 38, 63, 0.2); background: #f3f7fc; color: #12263f; }
+.song-reader-light .song-reader-mobilebar .mobilebar-tone small { color: #516a85; }
+.song-reader-light .song-reader-mobilebar .mobilebar-tone strong { color: #c25e00; }
+.song-reader-light .song-reader-mobilebar .mobilebar-menu { background: #1686d9; color: #ffffff; }
+.song-reader-light .song-reader-sheet-head strong { color: #12263f; }
+
+/* ADAPTACIÓN MÓVIL (PANTALLAS PEQUEÑAS < 800px) */
+@media (max-width: 800px) {
+    .song-reader-content { padding: 16px 16px 24px; }
 }

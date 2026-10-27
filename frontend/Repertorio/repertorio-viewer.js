@@ -26,6 +26,9 @@
 
     const notesSpanish = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
     const notesEnglish = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const notesSpanishFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
+    const notesEnglishFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    let useFlats = false;
 
     const naturalSemitones = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11, Do: 0, Re: 2, Mi: 4, Fa: 5, Sol: 7, La: 9, Si: 11 };
 
@@ -79,12 +82,14 @@
 
     function formatChordNote(semitoneIndex) {
         const normalizedIndex = (semitoneIndex % 12 + 12) % 12;
+        const english = useFlats ? notesEnglishFlat : notesEnglish;
+        const spanish = useFlats ? notesSpanishFlat : notesSpanish;
         if (selectedCipher === 'english') {
-            return notesEnglish[normalizedIndex];
+            return english[normalizedIndex];
         } else if (selectedCipher === 'spanish') {
-            return notesSpanish[normalizedIndex];
+            return spanish[normalizedIndex];
         } else {
-            return notesSpanish[normalizedIndex].toUpperCase();
+            return spanish[normalizedIndex].toUpperCase();
         }
     }
 
@@ -596,11 +601,26 @@
         };
 
         root.innerHTML = `
-            <aside class="song-reader-sidebar">${menuMarkup()}</aside>
+            <aside class="song-reader-sidebar">
+                <div class="song-reader-sheet-head">
+                    <span class="song-reader-sheet-grip"></span>
+                    <strong>Opciones</strong>
+                    <button type="button" class="song-reader-icon-button" data-action="menu" aria-label="Cerrar opciones">✕</button>
+                </div>
+                ${menuMarkup()}
+            </aside>
+            <div class="song-reader-backdrop" data-action="menu"></div>
             <main class="song-reader-main">
+                <div class="song-reader-topbar">
+                    <button type="button" class="song-reader-icon-button" data-action="close" aria-label="Cerrar lector">‹</button>
+                    <div class="song-reader-topbar-title">
+                        <strong>${escapeText(song?.title)}</strong>
+                        <span>${escapeText(song?.author || 'Autor no registrado')}</span>
+                    </div>
+                    <button type="button" class="song-reader-icon-button" data-action="mobile-search" aria-label="Buscar canción">⌕</button>
+                </div>
                 <div class="song-reader-content">
                     <div class="song-reader-heading">
-                        <button class="song-reader-icon-button song-reader-mobile-menu" data-action="menu" aria-label="Abrir menú">☰</button>
                         <div>
                             <h1>${escapeText(song?.title)}</h1>
                             <p>${escapeText(song?.author || 'Autor no registrado')} · ${song?.has_sequence ? 'Tiene secuencia' : 'Sin secuencia'}</p>
@@ -620,6 +640,12 @@
                     </article>
                 </div>
             </main>
+            <nav class="song-reader-mobilebar" aria-label="Acciones rápidas">
+                <button type="button" data-action="transpose-down" aria-label="Bajar medio tono">−½</button>
+                <button type="button" class="mobilebar-tone" data-action="mobile-tone" aria-label="Elegir tono"><small>Tono</small><strong>${escapeText(currentTone)}</strong></button>
+                <button type="button" data-action="transpose-up" aria-label="Subir medio tono">+½</button>
+                <button type="button" class="mobilebar-menu" data-action="menu" aria-label="Abrir opciones"><span>☰</span> Opciones</button>
+            </nav>
         `;
         popupEl = null;
 
@@ -690,7 +716,7 @@
                 button.append(title, author);
                 button.addEventListener('click', () => {
                     searchQuery = '';
-                    window.openSongViewer(item, { keepMenu: true });
+                    window.openSongViewer(item, { keepMenu: !window.matchMedia('(max-width: 1024px)').matches });
                 });
                 searchResults.appendChild(button);
             });
@@ -903,6 +929,15 @@
         if (action === 'close') {
             root.hidden = true;
             document.body.style.overflow = '';
+        } else if (action === 'mobile-tone') {
+            menuOpen = true;
+            openSubmenu = 'tone';
+            render();
+        } else if (action === 'mobile-search') {
+            menuOpen = true;
+            openSubmenu = null;
+            render();
+            root.querySelector('#songReaderSearch')?.focus();
         } else if (action === 'menu') {
             menuOpen = !menuOpen;
             render();
@@ -943,9 +978,30 @@
         }
     }
 
+    // Si la canción escribe bemoles (Sib, Bb) y ningún sostenido, se mantienen los bemoles
+    function detectFlats() {
+        let flats = 0;
+        let sharps = 0;
+        songLines().forEach(({ chord }) => {
+            (chord.match(/\S+/g) || []).forEach((token) => {
+                const parsed = parseChordWithPunctuation(token);
+                if (!parsed) return;
+                const body = token.replace(/^[(\[]+/, '');
+                const accidentals = body.match(new RegExp(chordRootPattern, 'g')) || [];
+                accidentals.forEach((root) => {
+                    if (/[b♭]$/.test(root) && !/^[Bb]$/.test(root)) flats += 1;
+                    else if (/[#♯]$/.test(root)) sharps += 1;
+                });
+            });
+        });
+        return flats > 0 && sharps === 0;
+    }
+
     window.openSongViewer = (selectedSong, { keepMenu = false } = {}) => {
+        useFlats = false;
         hideChordPopup();
         song = selectedSong;
+        useFlats = detectFlats();
         transpose = 0;
         capo = 0;
         openSubmenu = null;
