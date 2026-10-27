@@ -5,6 +5,7 @@
     let currentPage = 1;
     let composerLines = [];
     let activeChordInput = null;
+    let activeLineIndex = -1;
     let canManageChords = true;
     window.getRepertorioSongs = () => songs;
 
@@ -93,13 +94,47 @@
             remove.type = 'button';
             remove.addEventListener('click', () => {
                 composerLines.splice(index, 1);
+                activeLineIndex = Math.min(index, composerLines.length - 1);
                 renderComposer();
                 syncComposer();
             });
-            row.prepend(chord, lyric);
+            const handle = document.createElement('button');
+            handle.type = 'button';
+            handle.className = 'song-line-handle';
+            handle.textContent = '⋮⋮';
+            handle.title = 'Arrastra para mover la línea';
+            handle.setAttribute('aria-label', `Mover la línea ${index + 1}`);
+            handle.addEventListener('pointerdown', (event) => startLineDrag(event, row, handle));
+            row.dataset.index = String(index);
+            [chord, lyric].forEach((input) => input.addEventListener('focus', () => { activeLineIndex = index; }));
+            row.prepend(handle, chord, lyric);
             editor.appendChild(row);
         });
         syncComposer();
+    }
+
+    function startLineDrag(event, row, handle) {
+        event.preventDefault();
+        const editor = $('#songLineEditor');
+        handle.setPointerCapture(event.pointerId);
+        row.classList.add('dragging');
+        const move = (e) => {
+            const siblings = [...editor.children].filter((el) => el !== row);
+            const next = siblings.find((el) => e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2);
+            if (next) editor.insertBefore(row, next); else editor.appendChild(row);
+        };
+        const end = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', end);
+            handle.removeEventListener('pointercancel', end);
+            const order = [...editor.children].map((el) => Number(el.dataset.index));
+            composerLines = order.map((i) => composerLines[i]);
+            activeLineIndex = order.indexOf(Number(row.dataset.index));
+            renderComposer();
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', end);
+        handle.addEventListener('pointercancel', end);
     }
 
     function loadComposer(lyrics, chords) {
@@ -123,6 +158,7 @@
         $('#songForm button[type="submit"]').textContent = 'Guardar canción';
         $('#cancelSongEdit').hidden = true;
         composerLines = [];
+        activeLineIndex = -1;
         renderComposer();
     }
 
@@ -245,8 +281,13 @@
         $('#songStatus').textContent = 'Se separaron las líneas de letra y acordes.';
     });
     $('#addSongLine').addEventListener('click', () => {
-        composerLines.push({ chord: '', lyric: '' });
+        const at = activeLineIndex >= 0 && activeLineIndex < composerLines.length ? activeLineIndex + 1 : composerLines.length;
+        composerLines.splice(at, 0, { chord: '', lyric: '' });
+        activeLineIndex = at;
         renderComposer();
+        const target = $('#songLineEditor').children[at];
+        const input = target && (canManageChords ? target.querySelector('.song-line-chord') : target.querySelector('input:not(.song-line-chord)'));
+        if (input) { input.focus(); target.scrollIntoView({ block: 'nearest' }); }
     });
     $('#copySongLyrics').addEventListener('click', async () => {
         syncComposer();

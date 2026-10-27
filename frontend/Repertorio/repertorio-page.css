@@ -112,10 +112,12 @@ body {
 .chord-tools > div { display:flex; flex-wrap:wrap; gap:5px; }
 .chord-tools button { min-width:34px; min-height:29px; padding:0 7px; border:1px solid #b9d9ed; border-radius:7px; background:#f1f9fe; color:#176c9f; font:inherit; font-weight:800; cursor:pointer; }
 .song-line-editor { display:grid; gap:7px; }
-.song-line-row { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(0,2fr) auto; gap:8px; align-items:center; padding:7px; border:1px solid var(--repertoire-line); border-radius:10px; background:#f8fbff; }
+.song-line-row { display:grid; grid-template-columns:auto minmax(100px,.8fr) minmax(0,2fr) auto; gap:8px; align-items:center; padding:7px; border:1px solid var(--repertoire-line); border-radius:10px; background:#f8fbff; }
+.song-line-handle { width:26px; min-height:36px; padding:0; border:0; background:none; color:#7a95ad; font-size:16px; line-height:1; letter-spacing:-3px; cursor:grab; touch-action:none; user-select:none; }
+.song-line-row.dragging { border-color:#4aa8e7; background:#e8f5ff; box-shadow:0 6px 18px rgba(22,134,217,.25); }
 .song-line-row input { min-height:36px; padding:7px 9px; border:1px solid var(--repertoire-line); border-radius:8px; font:inherit; }
 .song-line-chord { color:#147dbd; font-weight:800; }
-.song-line-editor.lyrics-only .song-line-row { grid-template-columns:minmax(0,1fr) auto; }
+.song-line-editor.lyrics-only .song-line-row { grid-template-columns:auto minmax(0,1fr) auto; }
 .song-line-editor.lyrics-only .song-line-chord { display:none; }
 .song-line-remove { border:0; background:none; color:#9b2631; font:inherit; font-size:11px; font-weight:800; cursor:pointer; }
 .composer-empty, .form-status, .results-meta { margin:0; color:var(--repertoire-muted); font-size:12px; }
