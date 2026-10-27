@@ -296,6 +296,21 @@
         }
         .form-field textarea { min-height:76px; resize:vertical; }
         .form-help { color:var(--muted); font-size:11px; line-height:1.45; }
+        .song-composer { display:grid; gap:10px; }
+        .song-composer-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+        .song-composer-toolbar button, .song-chord-suggestion { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--navy); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+        .song-composer-toolbar button:hover, .song-chord-suggestion:hover { border-color:#69b4e7; background:#eff8ff; }
+        .song-paste-input { min-height:90px; }
+        .song-line-editor { display:grid; gap:8px; }
+        .song-line-row { display:grid; grid-template-columns:minmax(120px,.8fr) minmax(0,2fr) auto; gap:8px; align-items:center; padding:8px; border:1px solid var(--line); border-radius:10px; background:#f8fbff; }
+        .song-line-row input { width:100%; min-height:36px; padding:7px 9px; border:1px solid rgba(106,142,174,.28); border-radius:8px; background:#fff; color:var(--ink); font:inherit; }
+        .song-line-chord { font-weight:700; }
+        .song-line-editor.lyrics-only .song-line-row { grid-template-columns:minmax(0,1fr) auto; }
+        .song-line-editor.lyrics-only .song-line-chord { display:none; }
+        .song-line-remove { padding:0; border:0; background:none; color:#9b2631; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+        .song-chord-suggestions { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+        .song-chord-suggestions span { color:var(--muted); font-size:11px; }
+        .song-composer-empty { margin:0; color:var(--muted); font-size:12px; }
         .form-field.full { grid-column:1 / -1; }
         .action-button {
             min-height:40px; padding:0 14px; border:0; border-radius:9px;
@@ -876,15 +891,31 @@
                 <label class="form-field role-option">
                     <input name="hasSequence" type="checkbox" value="true"> Tiene secuencia
                 </label>
-                <label class="form-field full">Letra
-                    <textarea name="lyrics" maxlength="12000"></textarea>
-                </label>
-                <label class="form-field full" id="songChordsField">Acordes opcionales
-                    <textarea name="chords" maxlength="12000" placeholder="Ejemplo:
+                <div class="form-field full" id="songComposerField">
+                    <span>Letra y acordes</span>
+                    <input name="lyrics" type="hidden">
+                    <input name="chords" type="hidden">
+                    <div class="song-composer">
+                        <textarea class="song-paste-input" id="songPasteInput" maxlength="24000" placeholder="Pega aquí la canción en el formato habitual:
 G             D
-Una vez más"></textarea>
-                    <span class="form-help">Puedes escribir los acordes respetando los espacios y saltos de línea. No es obligatorio agregarlos.</span>
-                </label>
+Una vez más
+
+C             G
+Me acerco a ti"></textarea>
+                        <div class="song-composer-toolbar">
+                            <button id="parseSongLines" type="button">Detectar letra y acordes</button>
+                            <button id="addSongLine" type="button">Agregar línea</button>
+                            <button id="copySongLyrics" type="button">Copiar letra sin acordes</button>
+                        </div>
+                        <p class="form-help">Pega los bloques de dos renglones y la app separará automáticamente los acordes de la letra. Después puedes ajustar solo las líneas que necesites.</p>
+                        <div class="song-chord-suggestions" id="songChordSuggestions" hidden>
+                            <span>Agregar nota:</span>
+                        </div>
+                        <div class="song-line-editor" id="songLineEditor">
+                            <p class="song-composer-empty">Todavía no hay líneas. Pega la canción y pulsa “Detectar letra y acordes”.</p>
+                        </div>
+                    </div>
+                </div>
                 <label class="form-field">Enlace de acordes
                     <input name="chordsUrl" type="url" maxlength="1000">
                 </label>
@@ -2014,6 +2045,136 @@ Una vez más"></textarea>
             return link;
         }
 
+        let songComposerLines = [];
+        let activeSongChordInput = null;
+        const chordSuggestions = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
+
+        function isChordLine(value) {
+            const tokens = value.trim().split(/\s+/).filter(Boolean);
+            if (!tokens.length || tokens.length > 16) return false;
+            return tokens.every((token) =>
+                /^(?:Do|Re|Mi|Fa|Sol|La|Si|[A-G])(?:[#b])?(?:m|maj|min|sus|dim|aug|add)?\d*$/.test(token)
+            );
+        }
+
+        function parseSongComposerText(value) {
+            const lines = String(value || '').replace(/\r/g, '').split('\n');
+            const parsed = [];
+            let pendingChord = '';
+            lines.forEach((line) => {
+                if (!line.trim()) {
+                    if (pendingChord) {
+                        parsed.push({ chord: pendingChord, lyric: '' });
+                        pendingChord = '';
+                    } else if (parsed.length && parsed[parsed.length - 1].lyric) {
+                        parsed.push({ chord: '', lyric: '' });
+                    }
+                    return;
+                }
+                if (isChordLine(line)) {
+                    if (pendingChord) parsed.push({ chord: pendingChord, lyric: '' });
+                    pendingChord = line.trim();
+                    return;
+                }
+                parsed.push({ chord: pendingChord, lyric: line });
+                pendingChord = '';
+            });
+            if (pendingChord) parsed.push({ chord: pendingChord, lyric: '' });
+            return parsed.length ? parsed : [{ chord: '', lyric: '' }];
+        }
+
+        function syncSongComposerFields() {
+            const form = document.getElementById('songForm');
+            form.elements.lyrics.value = songComposerLines.map(({ lyric }) => lyric).join('\n');
+            form.elements.chords.value = songComposerLines.map(({ chord }) => chord).join('\n');
+        }
+
+        function renderSongComposer() {
+            const editor = document.getElementById('songLineEditor');
+            editor.replaceChildren();
+            if (!songComposerLines.length) {
+                addTextElement(editor, 'p', 'song-composer-empty',
+                    'Todavía no hay líneas. Pega la canción y pulsa “Detectar letra y acordes”.');
+                return;
+            }
+            songComposerLines.forEach((line, index) => {
+                const row = document.createElement('div');
+                row.className = 'song-line-row';
+                const chord = document.createElement('input');
+                chord.className = 'song-line-chord';
+                chord.value = line.chord;
+                chord.placeholder = 'Acordes';
+                chord.setAttribute('aria-label', `Acordes de la línea ${index + 1}`);
+                chord.addEventListener('focus', () => { activeSongChordInput = chord; });
+                chord.addEventListener('input', () => {
+                    songComposerLines[index].chord = chord.value;
+                    syncSongComposerFields();
+                });
+                const lyric = document.createElement('input');
+                lyric.value = line.lyric;
+                lyric.placeholder = 'Letra';
+                lyric.setAttribute('aria-label', `Letra de la línea ${index + 1}`);
+                lyric.addEventListener('input', () => {
+                    songComposerLines[index].lyric = lyric.value;
+                    syncSongComposerFields();
+                });
+                const remove = addTextElement(row, 'button', 'song-line-remove', 'Quitar');
+                remove.type = 'button';
+                remove.addEventListener('click', () => {
+                    songComposerLines.splice(index, 1);
+                    renderSongComposer();
+                    syncSongComposerFields();
+                });
+                row.prepend(chord, lyric);
+                editor.appendChild(row);
+            });
+            syncSongComposerFields();
+        }
+
+        function loadSongComposerText(value) {
+            songComposerLines = parseSongComposerText(value);
+            document.getElementById('songPasteInput').value = value || '';
+            renderSongComposer();
+        }
+
+        function loadSongComposerFields(lyrics, chords) {
+            const lyricLines = String(lyrics || '').replace(/\r/g, '').split('\n');
+            const chordLines = String(chords || '').replace(/\r/g, '').split('\n');
+            const length = Math.max(lyricLines.length, chordLines.length);
+            songComposerLines = Array.from({ length: Math.max(length, 1) }, (_, index) => ({
+                chord: chordLines[index] || '',
+                lyric: lyricLines[index] || ''
+            }));
+            document.getElementById('songPasteInput').value = songComposerLines
+                .map(({ chord, lyric }) => chord ? `${chord}\n${lyric}` : lyric)
+                .join('\n');
+            renderSongComposer();
+        }
+
+        function appendChordSuggestion(chordName) {
+            if (!activeSongChordInput) {
+                document.getElementById('songStatus').textContent =
+                    'Selecciona primero una línea de acordes.';
+                return;
+            }
+            const separator = activeSongChordInput.value.trim() ? ' ' : '';
+            activeSongChordInput.value += `${separator}${chordName}`;
+            activeSongChordInput.dispatchEvent(new Event('input'));
+            activeSongChordInput.focus();
+        }
+
+        function formatSongSheet(song) {
+            const lyrics = String(song.lyrics || '').replace(/\r/g, '').split('\n');
+            const chords = String(song.chords || '').replace(/\r/g, '').split('\n');
+            const hasChords = chords.some((chord) => chord.trim());
+            const length = Math.max(lyrics.length, chords.length);
+            return Array.from({ length }, (_, index) => {
+                const lyric = lyrics[index] || '';
+                const chord = chords[index] || '';
+                return hasChords ? `${chord}\n${lyric}` : lyric;
+            }).join('\n');
+        }
+
         function renderSongTable() {
             const list = document.getElementById('songList');
             list.replaceChildren();
@@ -2097,27 +2258,13 @@ Una vez más"></textarea>
                         `Última vez tocado: ${song.last_played_at ? formatServiceDate(song.last_played_at) : 'Sin registro'}`;
                     const content = document.getElementById('songDetailContent');
                     content.replaceChildren();
-                    const lyricsSection = document.createElement('section');
-                    addTextElement(lyricsSection, 'strong', '', 'Letra');
-                    const lyrics = addTextElement(
-                        lyricsSection,
+                    const sheet = addTextElement(
+                        content,
                         'p',
                         'song-lyrics-content',
-                        song.lyrics || 'No hay letra agregada.'
+                        formatSongSheet(song) || 'No hay letra agregada.'
                     );
-                    lyrics.setAttribute('aria-label', 'Letra de la canción');
-                    content.appendChild(lyricsSection);
-                    const chordsSection = document.createElement('section');
-                    addTextElement(chordsSection, 'strong', '', 'Acordes');
-                    const chords = addTextElement(
-                        chordsSection,
-                        'p',
-                        'song-lyrics-content',
-                        song.chords || 'No hay acordes agregados.'
-                    );
-                    chords.setAttribute('aria-label', 'Acordes de la canción');
-                    chordsSection.appendChild(chords);
-                    content.appendChild(chordsSection);
+                    sheet.setAttribute('aria-label', 'Letra y acordes de la canción');
                     const links = document.createElement('div');
                     links.className = 'inline-actions';
                     addExternalLink(links, 'Abrir acordes', song.chords_url);
@@ -2132,8 +2279,7 @@ Una vez más"></textarea>
                     form.elements.title.value = song.title || '';
                     form.elements.author.value = song.author || '';
                     form.elements.hasSequence.checked = Boolean(song.has_sequence);
-                    form.elements.lyrics.value = song.lyrics || '';
-                    form.elements.chords.value = song.chords || '';
+                    loadSongComposerFields(song.lyrics, song.chords);
                     form.elements.chordsUrl.value = song.chords_url || '';
                     form.elements.sheetUrl.value = song.sheet_url || '';
                     form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
@@ -2230,10 +2376,44 @@ Una vez más"></textarea>
             renderSongTable();
         });
         document.getElementById('serviceSongSearch').addEventListener('input', renderServiceSongPicker);
+        document.getElementById('parseSongLines').addEventListener('click', () => {
+            loadSongComposerText(document.getElementById('songPasteInput').value);
+            document.getElementById('songStatus').textContent = 'Se separaron las líneas de letra y acordes.';
+        });
+        document.getElementById('addSongLine').addEventListener('click', () => {
+            songComposerLines.push({ chord: '', lyric: '' });
+            renderSongComposer();
+            const inputs = document.querySelectorAll('#songLineEditor input');
+            const lastLyric = inputs[inputs.length - 1];
+            lastLyric?.focus();
+        });
+        document.getElementById('copySongLyrics').addEventListener('click', async () => {
+            syncSongComposerFields();
+            try {
+                await navigator.clipboard.writeText(document.getElementById('songForm').elements.lyrics.value);
+                document.getElementById('songStatus').textContent = 'La letra se copió sin los acordes.';
+            } catch (error) {
+                console.error('No se pudo copiar la letra sin acordes:', error);
+                document.getElementById('songStatus').textContent =
+                    'No se pudo copiar automáticamente. Selecciona la letra desde el editor para copiarla.';
+            }
+        });
+        chordSuggestions.forEach((chordName) => {
+            const button = addTextElement(
+                document.getElementById('songChordSuggestions'),
+                'button',
+                'song-chord-suggestion',
+                chordName
+            );
+            button.type = 'button';
+            button.addEventListener('click', () => appendChordSuggestion(chordName));
+        });
         document.getElementById('cancelSongEdit').addEventListener('click', () => {
             const form = document.getElementById('songForm');
             form.reset();
             form.elements.songId.value = '';
+            songComposerLines = [];
+            renderSongComposer();
             form.querySelector('button[type="submit"]').textContent = 'Agregar canción';
             document.getElementById('cancelSongEdit').hidden = true;
         });
@@ -2601,6 +2781,7 @@ Una vez más"></textarea>
             event.preventDefault();
             const form = event.currentTarget;
             const data = new FormData(form);
+            syncSongComposerFields();
             const button = form.querySelector('button[type="submit"]');
             const songId = String(data.get('songId') || '');
             button.disabled = true;
@@ -2622,6 +2803,8 @@ Una vez más"></textarea>
                 );
                 form.reset();
                 form.elements.songId.value = '';
+                songComposerLines = [];
+                renderSongComposer();
                 button.textContent = 'Agregar canción';
                 document.getElementById('cancelSongEdit').hidden = true;
                 document.getElementById('songStatus').textContent =
@@ -2817,7 +3000,8 @@ Una vez más"></textarea>
             const canAccessSongs = areas.some((area) => [1, 2, 3, 5].includes(area));
             const canManageChords = areas.some((area) => [1, 2, 5].includes(area));
             document.getElementById('songForm').hidden = !canAccessSongs;
-            document.getElementById('songChordsField').hidden = !canManageChords;
+            document.getElementById('songChordSuggestions').hidden = !canManageChords;
+            document.getElementById('songLineEditor').classList.toggle('lyrics-only', !canManageChords);
             document.getElementById('resourceForm').hidden = !areas.some((area) => [2, 3, 5].includes(area));
             document.getElementById('monitorForm').hidden = !areas.some((area) => [2, 4, 5].includes(area));
             document.getElementById('serviceManagement').hidden = !canManageServices;
