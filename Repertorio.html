@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07182f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/src/images/Logo/apple-touch-icon.png">
+    <link rel="stylesheet" href="/pwa.css">
+    <link rel="stylesheet" href="/repertorio-page.css">
+    <link rel="stylesheet" href="/repertorio-viewer.css">
+    <title>Repertorio - Mi Iglesia</title>
+</head>
+<body>
+    <header class="repertoire-hero">
+        <nav class="repertoire-nav">
+            <a class="repertoire-brand" href="Inicio.html">
+                <img src="src/images/Logo/LOGO_Blanco.png" alt="">
+                <span>Mi Iglesia</span>
+            </a>
+            <div class="repertoire-nav-actions">
+                <span id="repertoireUserName"></span>
+                <a class="repertoire-back-link" href="Inicio.html">Volver a inicio</a>
+            </div>
+        </nav>
+        <div class="repertoire-intro">
+            <p>REPERTORIO MUSICAL</p>
+            <h1>Alabemos con preparación.</h1>
+            <span>Consulta letras, acordes y recursos desde una vista pensada para músicos y coordinación.</span>
+        </div>
+    </header>
+
+    <main class="repertoire-main">
+        <section class="repertoire-layout">
+            <article class="repertoire-editor-card">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">Biblioteca</span>
+                        <h2 id="songFormHeading">Agregar canción</h2>
+                    </div>
+                    <span class="editor-badge">Letra + acordes</span>
+                </div>
+                <form id="songForm" class="repertoire-form">
+                    <input name="songId" type="hidden">
+                    <label>Nombre de la canción
+                        <input name="title" maxlength="160" required>
+                    </label>
+                    <label>Autor
+                        <input name="author" maxlength="160">
+                    </label>
+                    <label class="sequence-field">
+                        <input name="hasSequence" type="checkbox" value="true">
+                        <span>Tiene secuencia</span>
+                    </label>
+                    <div class="composer-field">
+                        <div class="composer-heading">
+                            <div>
+                                <label for="songPasteInput">Letra y acordes</label>
+                                <small>Pega bloques de dos renglones y la app los separará automáticamente.</small>
+                            </div>
+                            <button id="copySongLyrics" class="text-button" type="button">Copiar solo letra</button>
+                        </div>
+                        <input name="lyrics" type="hidden">
+                        <input name="chords" type="hidden">
+                        <textarea id="songPasteInput" maxlength="24000" placeholder="G             D
+Una vez más
+
+C             G
+Me acerco a ti"></textarea>
+                        <div class="composer-actions">
+                            <button id="parseSongLines" class="secondary-button" type="button">Detectar líneas</button>
+                            <button id="addSongLine" class="secondary-button" type="button">Agregar línea</button>
+                        </div>
+                        <div class="chord-tools">
+                            <span>Nota rápida</span>
+                            <div id="songChordSuggestions"></div>
+                        </div>
+                        <div id="songLineEditor" class="song-line-editor">
+                            <p class="composer-empty">Pega la canción y pulsa “Detectar líneas”.</p>
+                        </div>
+                    </div>
+                    <div class="resource-fields">
+                        <label>Enlace de acordes
+                            <input name="chordsUrl" type="url" maxlength="1000">
+                        </label>
+                        <label>Enlace de partitura
+                            <input name="sheetUrl" type="url" maxlength="1000">
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary-button" type="submit">Guardar canción</button>
+                        <button id="cancelSongEdit" class="secondary-button" type="button" hidden>Cancelar edición</button>
+                    </div>
+                    <p id="songStatus" class="form-status" role="status" aria-live="polite"></p>
+                </form>
+            </article>
+
+            <aside class="repertoire-summary-card">
+                <span class="section-kicker">Tu biblioteca</span>
+                <strong id="songCount">0</strong>
+                <span>canciones disponibles</span>
+                <div class="summary-divider"></div>
+                <p>Usa el lector para estudiar la letra, revisar los acordes y preparar el servicio.</p>
+            </aside>
+        </section>
+
+        <section class="repertoire-library">
+            <div class="library-heading">
+                <div>
+                    <span class="section-kicker">Biblioteca musical</span>
+                    <h2>Últimas canciones</h2>
+                </div>
+                <input id="songSearch" class="library-search" type="search" placeholder="Buscar canción o autor…" aria-label="Buscar canción o autor">
+            </div>
+            <section id="songActivity" class="song-activity-card" aria-labelledby="songActivityTitle">
+                <div>
+                    <span class="section-kicker">Actividad</span>
+                    <h3 id="songActivityTitle">Actualizaciones recientes</h3>
+                </div>
+                <div id="songActivityList" class="activity-list"></div>
+            </section>
+            <p id="songResultsMeta" class="results-meta"></p>
+            <div class="library-table-wrap">
+                <table>
+                    <thead><tr><th>Canción</th><th>Autor</th><th>Secuencia</th><th>Última vez tocada</th><th>Acciones</th></tr></thead>
+                    <tbody id="songList"></tbody>
+                </table>
+            </div>
+            <nav id="songPagination" class="song-pagination" aria-label="Páginas del repertorio"></nav>
+        </section>
+    </main>
+
+    <script src="api-config.js"></script>
+    <script src="app.js"></script>
+    <script src="repertorio-viewer.js"></script>
+    <script src="repertorio-page.js"></script>
+    <script src="pwa.js"></script>
+</body>
+</html>

@@ -1264,6 +1264,10 @@ Me acerco a ti"></textarea>
         document.getElementById('appMenu').addEventListener('click', (event) => {
             const button = event.target.closest('[data-view]');
             if (button && !button.hidden) {
+                if (button.dataset.view === 'songs') {
+                    window.location.href = 'Repertorio.html';
+                    return;
+                }
                 setActiveView(button.dataset.view);
                 if (button.dataset.view === 'coordination') showPendingPrayerDialogIfNeeded();
             }
