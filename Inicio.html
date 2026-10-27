@@ -324,6 +324,70 @@
         }
         .service-card h3 { margin:0 0 5px; color:var(--navy); font-size:18px; }
         .service-date, .service-details, .audit-details { color:var(--muted); font-size:13px; }
+        .service-card {
+            position:relative;
+            overflow:hidden;
+            cursor:pointer;
+            transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        .service-card:hover, .service-card:focus-visible {
+            border-color:#f28c28;
+            box-shadow:0 12px 26px rgba(242,140,40,.16);
+            outline:0;
+            transform:translateY(-2px);
+        }
+        .service-card::after {
+            position:absolute;
+            right:-28px;
+            bottom:-28px;
+            width:100px;
+            height:100px;
+            border-radius:50%;
+            background:rgba(242,140,40,.1);
+            content:'';
+            pointer-events:none;
+        }
+        .service-card-image {
+            display:block;
+            width:calc(100% + 34px);
+            height:170px;
+            margin:-17px -17px 15px;
+            object-fit:cover;
+        }
+        .service-card-action {
+            display:inline-flex;
+            position:relative;
+            z-index:1;
+            margin-top:10px;
+            padding:7px 10px;
+            border-radius:999px;
+            background:#fff1df;
+            color:#b65d08;
+            font-size:12px;
+            font-weight:800;
+        }
+        .service-detail-dialog {
+            width:min(92vw, 680px);
+            max-height:min(86vh, 780px);
+            overflow:auto;
+            border:1px solid #f5c58e;
+            border-radius:24px;
+            padding:0;
+            color:var(--ink);
+            box-shadow:0 28px 90px rgba(0,14,41,.32);
+        }
+        .service-detail-dialog::backdrop { background:rgba(0,10,30,.65); backdrop-filter:blur(5px); }
+        .service-detail-content { padding:clamp(22px,5vw,36px); }
+        .service-detail-kicker { margin:0 0 5px; color:#c56b13; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+        .service-detail-content h2 { margin:0; color:var(--navy); font-size:clamp(25px,5vw,36px); }
+        .service-detail-date { margin:8px 0 0; color:#63809a; font-size:13px; font-weight:700; }
+        .service-detail-image-wrap:empty { display:none; }
+        .service-detail-image { display:block; width:100%; max-height:300px; margin:20px 0; border-radius:16px; object-fit:cover; }
+        .service-detail-section { margin-top:17px; padding-top:15px; border-top:1px solid var(--line); }
+        .service-detail-section h3 { margin:0 0 6px; color:#b65d08; font-size:15px; }
+        .service-detail-section p { margin:0; color:var(--muted); line-height:1.55; white-space:pre-wrap; }
+        .service-detail-close { display:flex; justify-content:flex-end; padding:0 0 26px; }
+        .service-detail-close button { min-height:40px; padding:0 16px; border:0; border-radius:11px; background:linear-gradient(135deg,#f49a3b,#d87012); color:#fff; font:inherit; font-weight:800; cursor:pointer; }
         .service-disclosure > summary {
             display:flex; align-items:center; justify-content:space-between; gap:14px;
             list-style:none; cursor:pointer;
@@ -869,6 +933,15 @@
         </section>
 
     </main>
+
+    <dialog class="service-detail-dialog" id="serviceDetailDialog" aria-labelledby="serviceDetailTitle">
+        <div class="service-detail-content">
+            <div id="serviceDetailContent"></div>
+            <div class="service-detail-close">
+                <button type="button" id="serviceDetailClose">Cerrar</button>
+            </div>
+        </div>
+    </dialog>
 
     <script src="api-config.js"></script>
     <script src="app.js"></script>
