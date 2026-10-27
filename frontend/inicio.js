@@ -98,10 +98,14 @@
                     openServiceDetails(service, canSeeTeam);
                 }
             });
-            const title = document.createElement('h3'); title.textContent = `${service.event_type}: ${service.title}`;
+            const tag = document.createElement('span'); tag.className = 'service-card-tag'; tag.textContent = service.event_type;
+            const dateBadge = document.createElement('span'); dateBadge.className = 'service-card-date-badge';
+            const startDate = new Date(service.starts_at);
+            dateBadge.innerHTML = `<strong>${new Intl.DateTimeFormat('es-MX', { day: '2-digit' }).format(startDate)}</strong><small>${new Intl.DateTimeFormat('es-MX', { month: 'short' }).format(startDate).replace('.', '').toUpperCase()}</small>`;
+            const title = document.createElement('h3'); title.textContent = service.title;
             const meta = document.createElement('div'); meta.className = 'service-date'; meta.textContent = date(service.starts_at);
             const details = document.createElement('p'); details.className = 'service-details'; details.textContent = service.details || 'Sin detalles adicionales.';
-            item.append(title, meta, details);
+            item.append(tag, dateBadge, title, meta, details);
             const action = document.createElement('span'); action.className = 'service-card-action'; action.textContent = 'Ver detalles';
             item.append(action);
             appendServiceImage(item, service, 'service-card-image');
