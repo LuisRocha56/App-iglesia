@@ -1561,21 +1561,43 @@ app.patch('/api/prayers/:id/moderation', getAuthenticatedUser, requireCoordinato
         return;
     }
     try {
-        const result = await pool.query(
-            `UPDATE prayer_requests SET status = $1, moderated_by = $2, moderated_at = NOW()
-             WHERE id = $3 AND status = 'pending'
-             RETURNING id`,
-            [status, req.auth.sub, req.params.id]
-        );
+        const client = await pool.connect();
+        let result;
+        try {
+            await client.query('BEGIN');
+            if (status === 'rejected') {
+                result = await client.query(
+                    `DELETE FROM prayer_requests
+                     WHERE id = $1 AND status = 'pending'
+                     RETURNING id`,
+                    [req.params.id]
+                );
+            } else {
+                result = await client.query(
+                    `UPDATE prayer_requests SET status = $1, moderated_by = $2, moderated_at = NOW()
+                     WHERE id = $3 AND status = 'pending'
+                     RETURNING id`,
+                    [status, req.auth.sub, req.params.id]
+                );
+            }
+            if (result.rowCount) {
+                await client.query(
+                    `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
+                     VALUES ($1, 'prayer.moderated', 'prayer_request', $2, $3)`,
+                    [req.auth.sub, req.params.id, JSON.stringify({ status })]
+                );
+            }
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
         if (!result.rowCount) {
             res.status(404).json({ success: false, message: 'No se encontró una petición pendiente.' });
             return;
         }
-        await pool.query(
-            `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
-             VALUES ($1, 'prayer.moderated', 'prayer_request', $2, $3)`,
-            [req.auth.sub, req.params.id, JSON.stringify({ status })]
-        );
         res.json({ success: true });
     } catch (error) {
         next(error);
