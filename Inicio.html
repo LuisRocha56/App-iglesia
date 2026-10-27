@@ -708,6 +708,11 @@
         </section>
     </header>
 
+    <div class="notification-banner" id="notificationBanner" role="alert" hidden>
+        <div id="notificationList"></div>
+        <button type="button" id="notificationDismiss">Entendido</button>
+    </div>
+
     <main>
         <button class="mobile-menu-backdrop" id="mobileMenuBackdrop" type="button" aria-label="Cerrar menú" hidden></button>
         <nav class="app-menu" id="appMenu" aria-label="Menú principal">
@@ -2713,6 +2718,47 @@
             MiIglesia.clearToken();
             window.location.replace('index.html');
         });
+
+        let shownNotificationIds = [];
+        async function checkNotifications() {
+            if (shownNotificationIds.length) return;
+            try {
+                const { notifications } = await MiIglesia.request('/api/notifications');
+                if (!notifications.length) return;
+                shownNotificationIds = notifications.map(({ id }) => id);
+                const list = document.getElementById('notificationList');
+                list.replaceChildren();
+                notifications.forEach((item) => {
+                    const entry = document.createElement('p');
+                    addTextElement(entry, 'strong', '', item.title);
+                    entry.append(item.body);
+                    list.appendChild(entry);
+                });
+                document.getElementById('notificationBanner').hidden = false;
+            } catch {
+                // Se reintenta en la siguiente comprobación.
+            }
+        }
+
+        document.getElementById('notificationDismiss').addEventListener('click', async () => {
+            const ids = shownNotificationIds;
+            document.getElementById('notificationBanner').hidden = true;
+            try {
+                await MiIglesia.request('/api/notifications/read', {
+                    method: 'POST',
+                    body: JSON.stringify({ ids })
+                });
+                shownNotificationIds = [];
+            } catch {
+                document.getElementById('notificationBanner').hidden = false;
+            }
+        });
+
+        setInterval(checkNotifications, 30000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) checkNotifications();
+        });
+        checkNotifications();
 
         loadPage();
     </script>

@@ -25,6 +25,37 @@
     outline-offset: 3px;
 }
 
+.notification-banner {
+    position: fixed;
+    z-index: 60;
+    top: max(12px, env(safe-area-inset-top));
+    left: 50%;
+    width: min(92vw, 440px);
+    padding: 14px 16px;
+    transform: translateX(-50%);
+    border-radius: 14px;
+    background: #fff;
+    color: #000e29;
+    box-shadow: 0 12px 40px rgba(0,14,41,.35);
+}
+
+.notification-banner p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
+.notification-banner strong { display: block; }
+
+.notification-banner button {
+    min-height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: #2929fd;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.notification-banner[hidden] { display: none; }
+
 .pwa-install-button[hidden] {
     display: none;
 }
