@@ -1,0 +1,4 @@
+@import url("../module-shell.css");
+.account-check { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
+.account-check input { width: 18px; height: 18px; }
+.account-notifications { margin-top: 16px; }

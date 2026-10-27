@@ -21,6 +21,21 @@ El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se gu
 
 El inicio muestra anuncios y próximos eventos. El menú despliega las funciones permitidas por rol. Master y Coordinador pueden programar eventos y equipos, publicar anuncios, aprobar o rechazar peticiones de oración y consultar el directorio. Solo Master puede crear usuarios, cambiar roles y restablecer credenciales, consultar auditorías y cambiar el nombre global de la iglesia. También puede verificar la conectividad de API y base de datos; los secretos técnicos permanecen en las variables de entorno.
 
+## Vistas independientes del frontend
+
+Cada módulo de la aplicación tiene ahora su propia carpeta, página, hoja de estilos y controlador:
+
+- `frontend/Eventos/`
+- `frontend/Peticiones/`
+- `frontend/Cuenta/`
+- `frontend/Coordinacion/`
+- `frontend/Repertorio/`
+- `frontend/Multimedia/`
+- `frontend/Sonido/`
+- `frontend/Administracion/`
+
+`Inicio.html` conserva únicamente el resumen de anuncios y próximos eventos. `frontend/module-shell.js` contiene solo la autenticación, la identificación del usuario y la navegación común; la carga y modificación de datos de cada módulo se ejecuta desde su propio archivo JavaScript.
+
 ## Instalar en el celular
 
 La aplicación se puede instalar como PWA desde el dominio HTTPS de Vercel. En Android, abre el sitio en Chrome y toca **Instalar app** (o elige **Instalar aplicación** en el menú). En iPhone o iPad, abre el sitio en Safari, toca **Compartir** y selecciona **Agregar a pantalla de inicio**. La PWA usa el mismo inicio de sesión y datos que la versión web. Para consultar o enviar información se requiere conexión a Internet; todavía no está publicada en App Store ni Google Play.
