@@ -7,11 +7,6 @@
     const userStatus = document.getElementById('userStatus');
     let users = [];
 
-    function normalizeName(value) {
-        return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es-MX')
-            .split(' ').map((word) => word ? `${word[0].toLocaleUpperCase('es-MX')}${word.slice(1)}` : word).join(' ');
-    }
-
     function renderUsers() {
         const query = userSearch.value.trim().toLocaleLowerCase('es-MX');
         userList.replaceChildren();
@@ -110,11 +105,11 @@
         try {
             await MiIglesia.request('/api/admin/users', {
                 method: 'POST',
-                body: JSON.stringify({ nombre: normalizeName(data.get('nombre')), telefono: data.get('telefono'), email: data.get('email'), password: data.get('password'), areas })
+                body: JSON.stringify({ nombre: data.get('nombre'), telefono: data.get('telefono'), email: data.get('email'), password: data.get('password'), areas })
             });
             event.currentTarget.reset();
             event.currentTarget.querySelector('[value="6"]').checked = true;
-            userStatus.textContent = 'Usuario creado con el nombre normalizado.';
+            userStatus.textContent = 'Usuario creado correctamente.';
             await load();
         } catch (error) { userStatus.textContent = error.message; }
     });

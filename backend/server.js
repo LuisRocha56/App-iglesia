@@ -44,15 +44,6 @@ const roleNames = {
     6: 'Miembro'
 };
 
-function normalizePersonName(value) {
-    return value
-        .trim()
-        .replace(/\s+/g, ' ')
-        .toLocaleLowerCase('es-MX')
-        .split(' ')
-        .map((word) => word ? `${word[0].toLocaleUpperCase('es-MX')}${word.slice(1)}` : word)
-        .join(' ');
-}
 const servicePositions = new Set([
     'Batería',
     'Corista',
@@ -663,7 +654,7 @@ app.post('/api/register', async (req, res, next) => {
             `INSERT INTO users (nombre, telefono, email, password_hash, area, category)
              VALUES ($1, $2, $3, $4, 6, $5)
              RETURNING id, nombre, area, role_ids, category`,
-            [normalizePersonName(nombre), telefono.trim(), normalizedEmail, passwordHash, normalizedCategory]
+            [nombre, telefono.trim(), normalizedEmail, passwordHash, normalizedCategory]
         );
         const user = { ...result.rows[0], ...getUserRoles(result.rows[0]) };
 
@@ -772,7 +763,7 @@ app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
              RETURNING id, nombre, telefono, email, area, role_ids, category,
                        address_street, address_neighborhood, house_number, whatsapp_opt_in`,
             [
-                normalizePersonName(nombre), telefono.trim(), normalizedEmail,
+                nombre, telefono.trim(), normalizedEmail,
                 addressStreet.trim(), addressNeighborhood.trim(), houseNumber.trim(),
                 typeof whatsappOptIn === 'boolean' ? whatsappOptIn : null,
                 req.auth.sub
@@ -2172,7 +2163,7 @@ app.post('/api/admin/users', getAuthenticatedUser, requireMaster, async (req, re
             `INSERT INTO users (nombre, telefono, email, password_hash, area, role_ids, category)
              VALUES ($1, $2, $3, $4, $5, $6, 'congregation')
              RETURNING id, nombre, telefono, email, area, role_ids, category, created_at`,
-            [normalizePersonName(nombre), telefono.trim(), normalizedEmail, passwordHash, areas[0], areas]
+            [nombre, telefono.trim(), normalizedEmail, passwordHash, areas[0], areas]
         );
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
@@ -2383,10 +2374,6 @@ async function startServer() {
         ALTER TABLE users
         ALTER COLUMN role_ids SET DEFAULT ARRAY[6]::INTEGER[],
         ALTER COLUMN role_ids SET NOT NULL
-    `);
-    await pool.query(`
-        UPDATE users
-        SET nombre = INITCAP(LOWER(TRIM(REGEXP_REPLACE(nombre, '\s+', ' ', 'g'))))
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS service_events (

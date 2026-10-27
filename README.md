@@ -60,7 +60,7 @@ El repertorio incluye un compositor de letra y acordes: se puede pegar una canci
 
 Cada persona puede actualizar sus propios datos y cambiar su contraseña confirmando la contraseña actual. La API no entrega contraseñas ni secretos técnicos.
 
-Master puede buscar usuarios por nombre, asignar uno o varios roles operativos, restablecer contraseñas y eliminar cuentas que no sean la propia. Los nombres se normalizan al guardarse: se reducen espacios y se escribe la primera letra de cada palabra en mayúscula. Las cuentas nuevas siguen comenzando con el rol Miembro.
+Master puede buscar usuarios por nombre, asignar uno o varios roles operativos, restablecer contraseñas y eliminar cuentas que no sean la propia. Los nombres se guardan exactamente como los escribe cada usuario. Las cuentas nuevas siguen comenzando con el rol Miembro.
 
 Al abrir `index.html`, si el navegador conserva un token de sesión válido, la página lo comprueba con el API y abre `Inicio.html` automáticamente. Si el token venció, se elimina y se solicita iniciar sesión otra vez. Si el API no responde, el token se conserva. Las sesiones actuales duran 8 horas; borrar los datos del navegador también cierra la sesión.
 
