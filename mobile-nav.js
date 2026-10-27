@@ -32,9 +32,10 @@
     ];
 
     const svg = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
-    const abs = (href) => new URL(href, base).pathname.toLowerCase();
-    const here = location.pathname.toLowerCase();
-    const isHere = (item) => abs(item.href) === here || (item.id === 'home' && (here === '/' || here.endsWith('/inicio')));
+    const abs = (href) => new URL(href, base).pathname;
+    const norm = (path) => path.toLowerCase().replace(/\.html$/, '').replace(/\/$/, '');
+    const here = norm(location.pathname);
+    const isHere = (item) => norm(abs(item.href)) === here;
 
     const style = document.createElement('style');
     style.textContent = `
