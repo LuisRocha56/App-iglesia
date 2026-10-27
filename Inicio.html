@@ -303,6 +303,21 @@
         }
         .service-card h3 { margin:0 0 5px; color:var(--navy); font-size:18px; }
         .service-date, .service-details, .audit-details { color:var(--muted); font-size:13px; }
+        .service-disclosure > summary {
+            display:flex; align-items:center; justify-content:space-between; gap:14px;
+            list-style:none; cursor:pointer;
+        }
+        .service-disclosure > summary::-webkit-details-marker { display:none; }
+        .service-disclosure > summary:focus-visible { outline:3px solid #65b7ff; outline-offset:4px; border-radius:5px; }
+        .service-summary-heading { min-width:0; }
+        .service-summary-heading h3 { margin-bottom:5px; }
+        .service-summary-heading .service-date { color:var(--muted); }
+        .service-disclosure-label { flex:0 0 auto; color:var(--blue); font-size:13px; font-weight:700; }
+        .service-expanded-content { display:grid; gap:12px; margin-top:14px; padding-top:13px; border-top:1px solid var(--line); }
+        .service-expanded-content .feed-image { margin-top:0; }
+        .service-expanded-section h4 { margin:0 0 7px; color:var(--navy); font-size:14px; }
+        .service-expanded-section p { margin:0; white-space:pre-wrap; }
+        .service-song-list { display:grid; gap:5px; margin:0; padding-left:20px; color:var(--muted); font-size:13px; }
         .assignment-list { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
         .assignment-chip {
             display:inline-flex; align-items:center; gap:7px; padding:6px 9px;
@@ -1406,8 +1421,22 @@
             currentServices.forEach((service) => {
                 const card = document.createElement('article');
                 card.className = 'service-card';
-                addTextElement(card, 'h3', '', `${service.event_type}: ${service.title}`);
-                addTextElement(card, 'div', 'service-date', formatServiceDate(service.starts_at));
+                const disclosure = document.createElement('details');
+                disclosure.className = 'service-disclosure';
+                const summary = document.createElement('summary');
+                const heading = document.createElement('div');
+                heading.className = 'service-summary-heading';
+                addTextElement(heading, 'h3', '', `${service.event_type}: ${service.title}`);
+                addTextElement(heading, 'div', 'service-date', formatServiceDate(service.starts_at));
+                summary.appendChild(heading);
+                const disclosureLabel = addTextElement(summary, 'span', 'service-disclosure-label', 'Ver detalles');
+                disclosure.addEventListener('toggle', () => {
+                    disclosureLabel.textContent = disclosure.open ? 'Ocultar detalles' : 'Ver detalles';
+                });
+                disclosure.appendChild(summary);
+
+                const content = document.createElement('div');
+                content.className = 'service-expanded-content';
                 if (service.has_image || service.image_url) {
                     const image = document.createElement('img');
                     image.className = 'feed-image';
@@ -1415,18 +1444,35 @@
                     image.loading = 'lazy';
                     if (service.image_url) image.src = service.image_url;
                     else loadPrivateImage(image, `/api/services/${encodeURIComponent(service.id)}/image`);
-                    card.appendChild(image);
+                    content.appendChild(image);
                 }
-                if (service.details) addTextElement(card, 'p', 'service-details', service.details);
+
+                if (service.details) {
+                    const detailsSection = document.createElement('section');
+                    detailsSection.className = 'service-expanded-section';
+                    addTextElement(detailsSection, 'h4', '', 'Detalles del culto');
+                    addTextElement(detailsSection, 'p', 'service-details', service.details);
+                    content.appendChild(detailsSection);
+                }
+
                 if (service.songs?.length) {
-                    addTextElement(
-                        card,
-                        'p',
-                        'service-details',
-                        `Cantos: ${service.songs.map((song) => song.title).join(', ')}`
-                    );
+                    const songsSection = document.createElement('section');
+                    songsSection.className = 'service-expanded-section';
+                    addTextElement(songsSection, 'h4', '', 'Cantos programados');
+                    const songs = document.createElement('ul');
+                    songs.className = 'service-song-list';
+                    service.songs.forEach((song) => {
+                        const songLabel = song.author ? `${song.title} - ${song.author}` : song.title;
+                        addTextElement(songs, 'li', '', songLabel);
+                    });
+                    songsSection.appendChild(songs);
+                    content.appendChild(songsSection);
                 }
+
                 if (canSeeTeam && service.assignments.length) {
+                    const teamSection = document.createElement('section');
+                    teamSection.className = 'service-expanded-section';
+                    addTextElement(teamSection, 'h4', '', 'Equipo del culto');
                     const assignments = document.createElement('div');
                     assignments.className = 'assignment-list';
                     service.assignments.forEach((assignment) => {
@@ -1446,8 +1492,16 @@
                         }
                         addAttendanceButton(chip, service, assignment);
                     });
-                    card.appendChild(assignments);
+                    teamSection.appendChild(assignments);
+                    content.appendChild(teamSection);
                 }
+
+                if (!content.childElementCount) {
+                    addTextElement(content, 'p', 'service-details', 'Aún no se agregan más detalles para este culto.');
+                }
+
+                disclosure.appendChild(content);
+                card.appendChild(disclosure);
                 list.appendChild(card);
             });
             if (!currentServices.length) {
