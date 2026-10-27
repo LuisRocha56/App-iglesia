@@ -13,7 +13,9 @@
 body {
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(180deg, #edf6fb, #f8fbfd 42%, #e8f2f7);
+    background:
+        radial-gradient(circle at 5% 22%, rgba(84,181,241,.22), transparent 28%),
+        linear-gradient(155deg, #eaf4fb, #f8fbfd 48%, #e8f2f8);
     color: var(--ink);
     font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
@@ -21,17 +23,37 @@ body {
 a { color: inherit; }
 
 .module-header {
-    padding: 18px max(18px, calc((100% - 1120px) / 2));
-    background: linear-gradient(135deg, #000719, var(--navy) 62%, #001b43);
+    position: relative;
+    overflow: hidden;
+    min-height: 270px;
+    padding: 24px max(18px, calc((100% - 1180px) / 2)) 90px;
+    background:
+        radial-gradient(circle at 88% 12%, rgba(103,192,255,.25) 0 145px, transparent 147px),
+        radial-gradient(ellipse at 12% 100%, rgba(38,94,255,.85), transparent 42%),
+        linear-gradient(125deg, #07162a, #0b2d54 62%, #14649d);
     color: #fff;
 }
 
+.module-header::after {
+    position: absolute;
+    right: 12%;
+    bottom: -100px;
+    width: 390px;
+    height: 190px;
+    border-radius: 50%;
+    background: rgba(73,160,239,.28);
+    content: '';
+    filter: blur(50px);
+}
+
 .module-header-inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    max-width: 1120px;
+    max-width: 1180px;
     margin: 0 auto;
 }
 
@@ -43,7 +65,8 @@ a { color: inherit; }
     text-decoration: none;
 }
 
-.module-brand img { width: 40px; height: 40px; object-fit: contain; }
+.module-brand { font-size: 17px; }
+.module-brand img { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(95,184,255,.3)); }
 
 .module-user {
     display: flex;
@@ -56,7 +79,7 @@ a { color: inherit; }
 
 .module-logout, .module-nav a, .module-button {
     min-height: 40px;
-    border-radius: 11px;
+    border-radius: 10px;
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -70,16 +93,25 @@ a { color: inherit; }
 }
 
 .module-main {
-    width: min(1120px, calc(100% - 32px));
+    position: relative;
+    z-index: 2;
+    width: min(1180px, calc(100% - 32px));
     margin: 0 auto;
-    padding: 22px 0 60px;
+    margin-top: -48px;
+    padding: 0 0 70px;
 }
 
 .module-nav {
     display: flex;
     gap: 9px;
     overflow-x: auto;
-    padding: 0 0 18px;
+    padding: 12px;
+    margin-bottom: 22px;
+    border: 1px solid rgba(255,255,255,.86);
+    border-radius: 24px;
+    background: rgba(255,255,255,.93);
+    box-shadow: 0 16px 40px rgba(31,74,115,.1);
+    backdrop-filter: blur(16px);
     scrollbar-width: thin;
 }
 
@@ -88,7 +120,7 @@ a { color: inherit; }
     align-items: center;
     flex: 0 0 auto;
     padding: 0 14px;
-    border: 1px solid var(--line);
+    border: 1px solid rgba(106,142,174,.22);
     background: rgba(255,255,255,.88);
     color: #29435d;
     text-decoration: none;
@@ -106,14 +138,16 @@ a { color: inherit; }
     align-items: end;
     justify-content: space-between;
     gap: 16px;
-    margin: 5px 0 20px;
+    margin: 0 0 20px;
+    padding: 22px 4px 0;
 }
 
 .module-hero h1 {
     margin: 0;
-    color: var(--navy);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(28px, 5vw, 42px);
+    color: #102a46;
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(30px, 5vw, 48px);
+    letter-spacing: -.055em;
 }
 
 .module-hero p { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }
@@ -121,9 +155,9 @@ a { color: inherit; }
 .module-card {
     padding: 22px;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 24px;
     background: rgba(255,255,255,.95);
-    box-shadow: 0 8px 22px rgba(32,54,111,.07);
+    box-shadow: 0 16px 40px rgba(31,74,115,.1);
 }
 
 .module-card + .module-card { margin-top: 18px; }
@@ -172,9 +206,10 @@ a { color: inherit; }
 [hidden] { display: none !important; }
 
 @media (max-width: 650px) {
-    .module-header { padding: 15px 16px; }
+    .module-header { min-height: 245px; padding: 18px 16px 82px; }
     .module-user span { max-width: 125px; overflow-wrap: anywhere; }
-    .module-main { width: min(100% - 22px, 1120px); padding-top: 14px; }
+    .module-main { width: min(100% - 22px, 1180px); }
+    .module-nav { border-radius: 18px; padding: 9px; }
     .module-hero { display: block; }
     .module-card { padding: 18px; border-radius: 15px; }
     .module-form { grid-template-columns: 1fr; }

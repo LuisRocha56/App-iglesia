@@ -52,6 +52,39 @@ body {
 .repertoire-intro h1 { max-width:650px; margin:0; font-size:clamp(32px, 5vw, 58px); letter-spacing:-.055em; line-height:1.04; }
 .repertoire-intro span { display:block; max-width:590px; margin-top:13px; color:#d5ecfa; font-size:15px; line-height:1.55; }
 .repertoire-main { position:relative; z-index:2; width:min(100%,1180px); margin:-48px auto 0; padding:0 18px 70px; }
+.repertoire-module-menu {
+    display:flex;
+    gap:9px;
+    overflow-x:auto;
+    margin-bottom:18px;
+    padding:12px;
+    border:1px solid rgba(255,255,255,.86);
+    border-radius:24px;
+    background:rgba(255,255,255,.93);
+    box-shadow:0 16px 40px rgba(31,74,115,.1);
+    backdrop-filter:blur(16px);
+    scrollbar-width:thin;
+}
+.repertoire-module-menu a {
+    display:inline-flex;
+    min-height:40px;
+    flex:0 0 auto;
+    align-items:center;
+    padding:0 14px;
+    border:1px solid var(--repertoire-line);
+    border-radius:11px;
+    background:#fff;
+    color:#29435d;
+    font-size:13px;
+    font-weight:800;
+    text-decoration:none;
+    transition:.16s ease;
+}
+.repertoire-module-menu a:hover, .repertoire-module-menu a[aria-current="page"] {
+    border-color:#69b4e7;
+    background:#e8f5ff;
+    color:#0877c1;
+}
 .repertoire-layout { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:18px; align-items:start; }
 .repertoire-editor-card, .repertoire-summary-card, .repertoire-library { border:1px solid rgba(255,255,255,.86); border-radius:24px; background:rgba(255,255,255,.93); box-shadow:0 16px 40px rgba(31,74,115,.1); backdrop-filter:blur(16px); }
 .repertoire-editor-card { padding:clamp(21px, 3vw, 32px); }

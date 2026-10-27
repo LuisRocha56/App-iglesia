@@ -722,6 +722,62 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; }
         }
+
+        /* La portada usa la misma navegación tipo cápsula que las vistas de módulo. */
+        .app-menu {
+            display:flex;
+            gap:10px;
+            overflow-x:auto;
+            margin:0 0 18px;
+            padding:12px;
+            border:1px solid rgba(255,255,255,.86);
+            border-radius:24px;
+            background:rgba(255,255,255,.93);
+            box-shadow:0 16px 40px rgba(31,74,115,.1);
+            backdrop-filter:blur(16px);
+            scrollbar-width:thin;
+        }
+        .menu-link {
+            display:inline-flex;
+            min-height:40px;
+            flex:0 0 auto;
+            align-items:center;
+            justify-content:center;
+            padding:0 15px;
+            border:1px solid rgba(106,142,174,.22);
+            border-radius:11px;
+            background:#fff;
+            color:#29435d;
+            font-size:13px;
+            font-weight:800;
+            text-decoration:none;
+            cursor:pointer;
+            transition:.16s ease;
+        }
+        .menu-link:hover, .menu-link:focus-visible {
+            border-color:#69b4e7;
+            background:#eff8ff;
+            color:#0877c1;
+        }
+        .menu-link[aria-current="page"] {
+            border-color:#4aa8e7;
+            background:#e8f5ff;
+            color:#0877c1;
+        }
+        @media (max-width:650px) {
+            .app-menu {
+                position:static;
+                width:auto;
+                max-height:none;
+                transform:none;
+                visibility:visible;
+                opacity:1;
+                padding:9px;
+                border-radius:18px;
+                box-shadow:0 16px 40px rgba(31,74,115,.1);
+            }
+            .menu-link { min-height:44px; padding:0 13px; }
+        }
     </style>
 </head>
 <body>
