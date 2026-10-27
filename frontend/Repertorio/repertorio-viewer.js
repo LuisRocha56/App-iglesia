@@ -75,14 +75,14 @@
         const lines = [];
         for (let index = 0; index < 6; index++) {
             const x = 15 + index * 12;
-            lines.push(`<line x1="${x}" y1="25" x2="${x}" y2="83" stroke="#aaa" stroke-width="1"/>`);
+            lines.push(`<line x1="${x}" y1="25" x2="${x}" y2="83" stroke="#5f748d" stroke-width="1"/>`);
         }
         for (let index = 0; index < 5; index++) {
             const y = 25 + index * 12;
-            lines.push(`<line x1="15" y1="${y}" x2="75" y2="${y}" stroke="#aaa" stroke-width="${index === 0 ? 3 : 1}"/>`);
+            lines.push(`<line x1="15" y1="${y}" x2="75" y2="${y}" stroke="#5f748d" stroke-width="${index === 0 ? 3 : 1}"/>`);
         }
         dots.forEach(([string, fret]) => {
-            lines.push(`<circle cx="${15 + (string - 1) * 12}" cy="${25 + fret * 12 - 6}" r="4" fill="#ff7610"/>`);
+            lines.push(`<circle cx="${15 + (string - 1) * 12}" cy="${25 + fret * 12 - 6}" r="4" fill="#38b6ff"/>`);
         });
         return `<div class="song-chord-diagram"><strong>${escapeText(name)}</strong><svg viewBox="0 0 90 100" aria-label="Diagrama de ${escapeText(name)}">${lines.join('')}</svg></div>`;
     }
