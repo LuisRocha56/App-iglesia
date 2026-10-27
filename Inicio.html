@@ -2,8 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#000e29">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mi Iglesia">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/src/images/Logo/apple-touch-icon.png">
+    <link rel="stylesheet" href="/pwa.css">
     <title>Inicio - Mi Iglesia</title>
     <style>
         :root {
@@ -768,6 +775,10 @@
                 </label>
                 <button class="action-button" type="submit">Cambiar contraseña</button>
             </form>
+            <div class="form-grid">
+                <p class="full" id="pushStatus">Comprobando notificaciones…</p>
+                <button class="action-button" id="pushToggle" type="button">Activar notificaciones</button>
+            </div>
             <p class="status" id="profileStatus" role="status" aria-live="polite"></p>
         </section>
 
@@ -845,7 +856,7 @@
 
         <section class="panel role-access" id="multimediaPanel" data-view-section="media" hidden>
             <h2>Multimedia</h2>
-            <p>Consulta anuncios, el cronograma de servicios y el banco de recursos visuales. Los archivos se guardan en la <a class="text-link" href="https://drive.google.com/drive/folders/1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh?usp=sharing" target="_blank" rel="noopener noreferrer">carpeta de Multimedia en Drive</a>.</p>
+            <p>Consulta anuncios, el cronograma de servicios y el banco de recursos visuales. Las imágenes y documentos se guardan en la base de datos.</p>
             <form class="form-grid" id="resourceForm" hidden>
                 <label class="form-field">Nombre
                     <input name="title" maxlength="160" required>
@@ -853,7 +864,7 @@
                 <label class="form-field">Tipo de recurso
                     <select name="category"><option>Imagen</option><option>Video</option><option>Logo</option><option>Banner</option><option>Otro</option></select>
                 </label>
-                <label class="form-field full">Imagen para subir a Drive
+                <label class="form-field full">Imagen
                     <input name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
                 </label>
                 <label class="form-field full">Descripción
@@ -883,7 +894,7 @@
             <p class="status" id="soundStatus" role="status" aria-live="polite"></p>
             <div class="feed-list" id="monitorList"></div>
             <h3>Manuales y archivos técnicos</h3>
-            <p>Los documentos se almacenan en la <a class="text-link" href="https://drive.google.com/drive/folders/1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP?usp=sharing" target="_blank" rel="noopener noreferrer">carpeta de Sonido en Drive</a>.</p>
+            <p>Los manuales y archivos técnicos se guardan en la base de datos.</p>
             <form class="form-grid" id="soundFileForm">
                 <label class="form-field">Nombre del archivo
                     <input name="title" maxlength="160" required>
@@ -2437,10 +2448,7 @@
                     body: payload
                 });
                 form.reset();
-                document.getElementById('resourceStatus').textContent =
-                    result.storage === 'drive'
-                        ? 'Imagen subida al banco de recursos de Drive.'
-                        : 'Drive no está configurado; la imagen se guardó en la base de datos temporalmente.';
+                document.getElementById('resourceStatus').textContent = 'Imagen guardada en la base de datos.';
                 await loadResources();
             } catch (error) {
                 document.getElementById('resourceStatus').textContent = error.message;
@@ -2455,15 +2463,12 @@
             const button = form.querySelector('button[type="submit"]');
             button.disabled = true;
             try {
-                const result = await MiIglesia.request('/api/sound-files', {
+                await MiIglesia.request('/api/sound-files', {
                     method: 'POST',
                     body: new FormData(form)
                 });
                 form.reset();
-                document.getElementById('soundFileStatus').textContent =
-                    result.storage === 'drive'
-                        ? 'Manual subido a Drive.'
-                        : 'Drive no está configurado; el manual se guardó en la base de datos temporalmente.';
+                document.getElementById('soundFileStatus').textContent = 'Manual guardado en la base de datos.';
                 await loadSoundFiles();
             } catch (error) {
                 document.getElementById('soundFileStatus').textContent = error.message;
@@ -2657,5 +2662,6 @@
 
         loadPage();
     </script>
+    <script src="pwa.js"></script>
 </body>
 </html>

@@ -1,0 +1,25 @@
+{
+    "id": "/",
+    "name": "Mi Iglesia - Templo Getsemaní",
+    "short_name": "Mi Iglesia",
+    "description": "Conecta con tu congregación y sirve junto a tu comunidad.",
+    "start_url": "/index.html",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#000e29",
+    "theme_color": "#000e29",
+    "icons": [
+        {
+            "src": "/src/images/Logo/app-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/src/images/Logo/app-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

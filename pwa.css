@@ -1,0 +1,30 @@
+.pwa-install-button {
+    position: fixed;
+    z-index: 50;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    min-height: 44px;
+    padding: 0 17px;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 999px;
+    background: #000e29;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,14,41,.25);
+    cursor: pointer;
+}
+
+.pwa-install-button:hover {
+    background: #123766;
+}
+
+.pwa-install-button:focus-visible {
+    outline: 3px solid #65b7ff;
+    outline-offset: 3px;
+}
+
+.pwa-install-button[hidden] {
+    display: none;
+}

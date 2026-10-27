@@ -21,6 +21,12 @@ El API crea y actualiza las tablas requeridas al iniciar. Las contraseñas se gu
 
 El inicio muestra anuncios y próximos eventos. El menú despliega las funciones permitidas por rol. Master y Coordinador pueden programar eventos y equipos, publicar anuncios, aprobar o rechazar peticiones de oración y consultar el directorio. Solo Master puede crear usuarios, cambiar roles y restablecer credenciales, consultar auditorías y cambiar el nombre global de la iglesia. También puede verificar la conectividad de API y base de datos; los secretos técnicos permanecen en las variables de entorno.
 
+## Instalar en el celular
+
+La aplicación se puede instalar como PWA desde el dominio HTTPS de Vercel. En Android, abre el sitio en Chrome y toca **Instalar app** (o elige **Instalar aplicación** en el menú). En iPhone o iPad, abre el sitio en Safari, toca **Compartir** y selecciona **Agregar a pantalla de inicio**. La PWA usa el mismo inicio de sesión y datos que la versión web. Para consultar o enviar información se requiere conexión a Internet; todavía no está publicada en App Store ni Google Play.
+
+Cuando se guarda un equipo de culto, cada persona asignada recibe una notificación en los dispositivos donde la activó desde **Mi perfil → Activar notificaciones**. En iPhone/iPad funciona desde iOS 16.4, y solo si la app se instaló en la pantalla de inicio y se abre desde su icono. Los avisos por WhatsApp se mantienen como canal adicional.
+
 Las asignaciones solo se muestran a usuarios con roles de equipo, coordinación o Master; los miembros ven el calendario sin el roster. Para asignar, se muestran las personas que tengan al menos un rol de Músico, Coordinador, Multimedia, Sonido o Master, sin importar cuál de esos roles tenga la persona ni el puesto seleccionado; las cuentas cuyo único rol sea Miembro no aparecen. Cada persona puede tener un puesto operativo por culto y Dirección puede añadirse además. Las personas asignadas pueden confirmar asistencia durante el día del evento. Las asignaciones se eliminan después de terminar el día del evento en la zona horaria `America/Mexico_City`; la limpieza corre al iniciar el API, periódicamente y antes de servir el programa.
 
 Master y Coordinación pueden preparar varias asignaciones para un evento; la lista es un borrador y no modifica el programa hasta pulsar **Terminar asignación de equipo**. Al finalizar, el API valida y guarda el lote completo en una transacción. Después intenta notificar por WhatsApp; un fallo de WhatsApp no deshace las asignaciones guardadas. Solo se envían avisos a personas que aceptaron recibirlos desde su perfil. Mientras `WHATSAPP_TEST_RECIPIENT` tenga un valor, todos esos avisos se dirigen exclusivamente a ese número de prueba (no a los teléfonos de los miembros). Además, el botón **Abrir chat de coordinación en WhatsApp** abre la conversación con `8182012236`, copia al portapapeles un resumen del equipo asignado y prepara el mismo texto en WhatsApp para que Coordinación lo revise y lo envíe manualmente.
@@ -59,9 +65,12 @@ Agrega estas variables de entorno en el servicio:
 - `WHATSAPP_API_VERSION`: versión Graph API vigente y compatible, por ejemplo `v23.0`.
 - `WHATSAPP_TEMPLATE_NAME` y `WHATSAPP_TEMPLATE_LANGUAGE`: plantilla aprobada por Meta y su idioma. La plantilla debe tener cuatro variables de cuerpo, en este orden: nombre, puesto, evento y fecha/hora.
 - Texto sugerido para la plantilla: `Hola {{1}}, te asignaron el puesto {{2}} en {{3}}. Fecha y hora: {{4}}. Si tienes dudas, contacta a coordinación.`
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT`: claves para las notificaciones de la app instalada. Genéralas una vez con `npx web-push generate-vapid-keys` dentro de `backend/`, guarda la privada solo como secreto en Render y usa un `mailto:` real en `VAPID_SUBJECT`.
 - `WHATSAPP_TEST_RECIPIENT`: configura `8182012236` en Render durante las pruebas; `.env.example` ya incluye ese valor para desarrollo local. El API agrega el prefijo `52` cuando se da un número mexicano de 10 dígitos. Antes de producción, borra esta variable o déjala vacía; de otro modo, todos los avisos seguirán llegando únicamente al destinatario de pruebas. La persona que recibe avisos reales debe haber activado el consentimiento de WhatsApp en su perfil.
 
 El rol Master autoriza las rutas administrativas en el servidor. Permite asignar varios roles a otras cuentas; el endpoint rechaza cambios al propio rol y no permite asignar Master.
+
+Las nuevas imágenes de anuncios, eventos y recursos, así como los manuales de Sonido, se guardan en PostgreSQL. El límite de carga es de 10 MB por archivo. Los archivos que ya estén en Drive permanecen vinculados a sus registros anteriores; las nuevas cargas no dependen de Drive.
 
 ### Vercel (frontend)
 

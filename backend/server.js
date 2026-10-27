@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const multer = require('multer');
 const { Pool } = require('pg');
-const { Readable } = require('node:stream');
+const webpush = require('web-push');
 const seedSongs = require('./cantos-getse.json');
 
 const app = express();
@@ -16,8 +16,6 @@ const port = Number(process.env.PORT) || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 const databaseUrl = process.env.DATABASE_URL;
 const masterEmail = process.env.MASTER_EMAIL?.trim().toLowerCase();
-const mediaDriveFolderId = '1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh';
-const soundDriveFolderId = '1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP';
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024, files: 1 },
@@ -80,6 +78,17 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY?.trim();
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+const pushEnabled = Boolean(vapidPublicKey && vapidPrivateKey);
+if (pushEnabled) {
+    webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT?.trim() || 'mailto:admin@example.com',
+        vapidPublicKey,
+        vapidPrivateKey
+    );
+}
+
 const pool = new Pool({
     connectionString: databaseUrl,
     ssl: process.env.NODE_ENV === 'production'
@@ -110,29 +119,6 @@ function getDriveClient() {
     });
     driveClient = google.drive({ version: 'v3', auth });
     return driveClient;
-}
-
-async function uploadToDrive(file, folderId) {
-    if (!file) return null;
-    if (!hasValidFileSignature(file)) {
-        const error = new Error('El contenido del archivo no coincide con su tipo declarado.');
-        error.status = 400;
-        throw error;
-    }
-    const drive = getDriveClient();
-    const result = await drive.files.create({
-        requestBody: {
-            name: `${Date.now()}-${file.originalname.replace(/[\\/]/g, '_').slice(0, 180)}`,
-            mimeType: file.mimetype,
-            parents: [folderId]
-        },
-        media: {
-            mimeType: file.mimetype,
-            body: Readable.from(file.buffer)
-        },
-        fields: 'id,name,mimeType,webViewLink,thumbnailLink'
-    });
-    return result.data;
 }
 
 function hasValidFileSignature(file) {
@@ -382,6 +368,65 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '64kb' }));
 
+async function sendAssignmentPush(assignments, service) {
+    if (!pushEnabled || !assignments.length) return { sent: 0, failed: 0 };
+
+    const positionsByUser = new Map();
+    assignments.forEach(({ user_id, position }) => {
+        const key = String(user_id);
+        positionsByUser.set(key, [...(positionsByUser.get(key) || []), position]);
+    });
+
+    let subscriptions;
+    try {
+        const result = await pool.query(
+            'SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ANY($1::bigint[])',
+            [[...positionsByUser.keys()]]
+        );
+        subscriptions = result.rows;
+    } catch (error) {
+        console.error('No se pudieron consultar las suscripciones de notificaciones:', error.message);
+        return { sent: 0, failed: 0 };
+    }
+
+    const date = new Intl.DateTimeFormat('es-MX', {
+        dateStyle: 'full',
+        timeStyle: 'short',
+        timeZone: 'America/Mexico_City'
+    }).format(new Date(service.starts_at));
+    const expiredIds = [];
+    let sent = 0;
+    let failed = 0;
+
+    await Promise.all(subscriptions.map(async (subscription) => {
+        const positions = positionsByUser.get(String(subscription.user_id));
+        const payload = JSON.stringify({
+            title: 'Se te asignó un puesto',
+            body: `${positions.join(', ')} en ${service.title}. ${date}`,
+            url: '/Inicio.html',
+            tag: `assignment-${service.id}`
+        });
+        try {
+            await webpush.sendNotification(
+                { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
+                payload,
+                { TTL: 60 * 60 * 24 }
+            );
+            sent += 1;
+        } catch (error) {
+            if (error.statusCode === 404 || error.statusCode === 410) expiredIds.push(subscription.id);
+            else console.error('No se pudo enviar una notificación push:', error.statusCode || error.message);
+            failed += 1;
+        }
+    }));
+
+    if (expiredIds.length) {
+        await pool.query('DELETE FROM push_subscriptions WHERE id = ANY($1::bigint[])', [expiredIds])
+            .catch((error) => console.error('No se pudieron limpiar suscripciones vencidas:', error.message));
+    }
+    return { sent, failed };
+}
+
 function createToken(user) {
     return jwt.sign(
         { sub: String(user.id), nombre: user.nombre },
@@ -479,6 +524,53 @@ function validHttpUrl(value) {
 
 app.get('/api/health', (_req, res) => {
     res.json({ success: true });
+});
+
+app.get('/api/push/public-key', getAuthenticatedUser, (_req, res) => {
+    res.json({ success: true, enabled: pushEnabled, publicKey: pushEnabled ? vapidPublicKey : null });
+});
+
+app.post('/api/push/subscribe', getAuthenticatedUser, async (req, res, next) => {
+    const { endpoint, keys } = req.body?.subscription || {};
+    if (!pushEnabled) {
+        res.status(503).json({ success: false, message: 'Las notificaciones no están configuradas en el servidor.' });
+        return;
+    }
+    if (typeof endpoint !== 'string' || endpoint.length > 2000 || !endpoint.startsWith('https://')
+        || typeof keys?.p256dh !== 'string' || keys.p256dh.length > 200
+        || typeof keys?.auth !== 'string' || keys.auth.length > 100) {
+        res.status(400).json({ success: false, message: 'La suscripción de notificaciones no es válida.' });
+        return;
+    }
+    try {
+        await pool.query(
+            `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (endpoint)
+             DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+            [req.auth.sub, endpoint, keys.p256dh, keys.auth]
+        );
+        res.status(201).json({ success: true });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/push/unsubscribe', getAuthenticatedUser, async (req, res, next) => {
+    const endpoint = req.body?.endpoint;
+    if (typeof endpoint !== 'string' || endpoint.length > 2000) {
+        res.status(400).json({ success: false, message: 'La suscripción de notificaciones no es válida.' });
+        return;
+    }
+    try {
+        await pool.query(
+            'DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2',
+            [endpoint, req.auth.sub]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        next(error);
+    }
 });
 
 app.post('/api/register', async (req, res, next) => {
@@ -926,7 +1018,9 @@ app.post('/api/services/:id/assignments', getAuthenticatedUser, requireCoordinat
              VALUES ($1, 'service.assignment.created', 'service_assignment', $2, $3)`,
             [req.auth.sub, result.rows[0].id, JSON.stringify({ serviceId, userId, position })]
         );
-        res.status(201).json({ success: true, assignment: { ...result.rows[0], name: user.nombre } });
+        const service = await pool.query('SELECT id, title, starts_at FROM service_events WHERE id = $1', [serviceId]);
+        const push = await sendAssignmentPush(result.rows, service.rows[0]);
+        res.status(201).json({ success: true, assignment: { ...result.rows[0], name: user.nombre }, push });
     } catch (error) {
         if (error.code === '23505') {
             res.status(409).json({
@@ -1067,7 +1161,9 @@ app.post('/api/services/:serviceId/assignments/batch', getAuthenticatedUser, req
                 ...(await sendAssignmentWhatsApp(assignment, service))
             }))
         );
+        const push = await sendAssignmentPush(savedAssignments, service);
         const notifications = {
+            push,
             sent: notificationResults.filter((result) => result.status === 'sent').map(({ name }) => name),
             failed: notificationResults.filter((result) => result.status === 'failed')
                 .map(({ name, reason }) => ({ name, reason })),
@@ -1580,13 +1676,7 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
         res.status(400).json({ success: false, message: 'Selecciona una imagen e ingresa un nombre y categoría válidos.' });
         return;
     }
-    let uploadedFile;
-    let recordSaved = false;
     try {
-        uploadedFile = isDriveConfigured() ? await uploadToDrive(req.file, mediaDriveFolderId) : null;
-        const resourceUrl = uploadedFile
-            ? uploadedFile.thumbnailLink || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(uploadedFile.id)}`
-            : '';
         const result = await pool.query(
             `INSERT INTO media_resources (
                  title, category, url, drive_file_id, file_data, mime_type, description, created_by
@@ -1594,12 +1684,10 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING id, title, category, url, description`,
             [
-                title.trim(), category, resourceUrl, uploadedFile?.id || null,
-                uploadedFile ? null : req.file.buffer, uploadedFile ? null : req.file.mimetype,
+                title.trim(), category, '', null, req.file.buffer, req.file.mimetype,
                 description.trim(), req.auth.sub
             ]
         );
-        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'resource.created', 'media_resource', $2)`,
@@ -1607,17 +1695,10 @@ app.post('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), parseU
         );
         res.status(201).json({
             success: true,
-            storage: uploadedFile ? 'drive' : 'database',
+            storage: 'database',
             resource: result.rows[0]
         });
     } catch (error) {
-        if (uploadedFile?.id && !recordSaved) {
-            try {
-                await deleteDriveFile(uploadedFile.id);
-            } catch (cleanupError) {
-                console.error('No se pudo limpiar el recurso de Drive tras un error:', cleanupError);
-            }
-        }
         next(error);
     }
 });
@@ -1636,8 +1717,10 @@ app.delete('/api/resources/:id', getAuthenticatedUser, requireAreas([2, 3, 5]), 
             res.status(404).json({ success: false, message: 'No se encontró ese recurso.' });
             return;
         }
-        if (existing.rows[0].drive_file_id) {
+        if (existing.rows[0].drive_file_id && isDriveConfigured()) {
             await deleteDriveFile(existing.rows[0].drive_file_id);
+        } else if (existing.rows[0].drive_file_id) {
+            console.warn(`El recurso ${req.params.id} tenía un archivo anterior en Drive; no hay credenciales para eliminarlo.`);
         }
         const result = await pool.query('DELETE FROM media_resources WHERE id = $1 RETURNING id', [req.params.id]);
         await pool.query(
@@ -1734,23 +1817,15 @@ app.post('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), pars
         res.status(400).json({ success: false, message: 'Selecciona un manual PDF, Word o PowerPoint y escribe su nombre.' });
         return;
     }
-    let uploadedFile;
-    let recordSaved = false;
     try {
-        uploadedFile = isDriveConfigured() ? await uploadToDrive(req.file, soundDriveFolderId) : null;
-        const url = uploadedFile
-            ? uploadedFile.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(uploadedFile.id)}/view`
-            : '';
         const result = await pool.query(
             `INSERT INTO sound_files (title, drive_file_id, url, mime_type, file_data, uploaded_by)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, title, drive_file_id, url, mime_type, created_at`,
             [
-                title.trim(), uploadedFile?.id || null, url, req.file.mimetype,
-                uploadedFile ? null : req.file.buffer, req.auth.sub
+                title.trim(), null, '', req.file.mimetype, req.file.buffer, req.auth.sub
             ]
         );
-        recordSaved = true;
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
              VALUES ($1, 'sound.manual.uploaded', 'sound_file', $2)`,
@@ -1758,17 +1833,10 @@ app.post('/api/sound-files', getAuthenticatedUser, requireAreas([2, 4, 5]), pars
         );
         res.status(201).json({
             success: true,
-            storage: uploadedFile ? 'drive' : 'database',
+            storage: 'database',
             file: result.rows[0]
         });
     } catch (error) {
-        if (uploadedFile?.id && !recordSaved) {
-            try {
-                await deleteDriveFile(uploadedFile.id);
-            } catch (cleanupError) {
-                console.error('No se pudo limpiar el manual de Drive tras un error:', cleanupError);
-            }
-        }
         next(error);
     }
 });
@@ -1784,7 +1852,11 @@ app.delete('/api/sound-files/:id', getAuthenticatedUser, requireAreas([2, 4, 5])
             res.status(404).json({ success: false, message: 'No se encontró ese archivo.' });
             return;
         }
-        await deleteDriveFile(existing.rows[0].drive_file_id);
+        if (existing.rows[0].drive_file_id && isDriveConfigured()) {
+            await deleteDriveFile(existing.rows[0].drive_file_id);
+        } else if (existing.rows[0].drive_file_id) {
+            console.warn(`El archivo ${req.params.id} tenía un manual anterior en Drive; no hay credenciales para eliminarlo.`);
+        }
         await pool.query('DELETE FROM sound_files WHERE id = $1', [req.params.id]);
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
@@ -2265,6 +2337,17 @@ async function startServer() {
             updated_by BIGINT NOT NULL REFERENCES users(id),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE (musician_name, monitor_type)
+        )
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
 
