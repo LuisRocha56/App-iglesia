@@ -11,6 +11,7 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/src/images/Logo/apple-touch-icon.png">
     <link rel="stylesheet" href="/pwa.css">
+    <link rel="stylesheet" href="/repertorio-viewer.css">
     <title>Inicio - Mi Iglesia</title>
     <style>
         :root {
@@ -2252,6 +2253,10 @@ Me acerco a ti"></textarea>
                 }
 
                 function showSongDetails(song) {
+                    if (window.openSongViewer) {
+                        window.openSongViewer(song);
+                        return;
+                    }
                     document.getElementById('songDetailTitle').textContent = song.title;
                     document.getElementById('songDetailMeta').textContent =
                         `${song.author || 'Autor no registrado'} · Secuencia: ${song.has_sequence ? 'Sí' : 'No'} · ` +
@@ -3127,6 +3132,7 @@ Me acerco a ti"></textarea>
         checkNotifications();
         loadPage().then(() => { lastDataRefreshAt = Date.now(); });
     </script>
+    <script src="repertorio-viewer.js"></script>
     <script src="pwa.js"></script>
 </body>
 </html>
