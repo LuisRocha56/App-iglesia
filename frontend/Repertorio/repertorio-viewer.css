@@ -382,6 +382,45 @@
     white-space: pre-wrap;
 }
 
+/* TEMA CLARO */
+.song-reader-light { background: #eef3f9; color: #12263f; }
+.song-reader-light .song-reader-sidebar { background: #ffffff; border-right-color: rgba(18, 38, 63, 0.15); }
+.song-reader-light .song-reader-main { background: #f7faff; }
+.song-reader-light .song-reader-menu-section { border-color: rgba(18, 38, 63, 0.14); background: #f3f7fc; }
+.song-reader-light .song-reader-menu-section h3 { color: #0f6db5; }
+.song-reader-light .song-reader-menu-item { border-top-color: rgba(18, 38, 63, 0.1); color: #12263f; }
+.song-reader-light .song-reader-menu-item span.item-val { color: #0f6db5; }
+.song-reader-light .song-reader-menu-item.active,
+.song-reader-light .song-reader-menu-item:hover,
+.song-reader-light .song-reader-icon-button:hover { background: rgba(22, 134, 217, 0.15); color: #12263f; }
+.song-reader-light .song-reader-icon-button,
+.song-reader-light .song-reader-search input,
+.song-reader-light .tone-btn {
+    border-color: rgba(18, 38, 63, 0.2);
+    background: #ffffff;
+    color: #12263f;
+}
+.song-reader-light .tone-btn:hover { background: #1686d9; color: #ffffff; }
+.song-reader-light .song-reader-search-results { border-color: rgba(18, 38, 63, 0.15); background: #ffffff; }
+.song-reader-light .song-reader-search-item { border-top-color: rgba(18, 38, 63, 0.08); color: #12263f; }
+.song-reader-light .song-reader-search-item span,
+.song-reader-light .song-reader-search-empty,
+.song-reader-light .reset-btn { color: #516a85; }
+.song-reader-light .song-reader-submenu { border-color: rgba(18, 38, 63, 0.2); background: #ffffff; box-shadow: 0 16px 40px rgba(18, 38, 63, 0.2); }
+.song-reader-light .option-btn { border-color: rgba(18, 38, 63, 0.18); background: #f3f7fc; color: #12263f; }
+.song-reader-light .option-btn:hover { background: rgba(22, 134, 217, 0.18); }
+.song-reader-light .option-btn.selected { background: #1686d9; color: #ffffff; }
+.song-reader-light .song-reader-heading h1 { color: #0a1b33; }
+.song-reader-light .song-reader-heading p { color: #516a85; }
+.song-reader-light .song-info-badge { background: rgba(15, 109, 181, 0.12); color: #0f6db5; }
+.song-reader-light .song-chord-diagram { border-color: rgba(18, 38, 63, 0.15); background: #ffffff; }
+.song-reader-light .song-chord-diagram strong { color: #0f6db5; }
+.song-reader-light .song-chord-diagram svg rect:not([fill="#000"]) { fill: #e6eef7; }
+.song-reader-light .song-chord-diagram svg line[stroke="#fff"] { stroke: #12263f; }
+.song-reader-light .song-reader-sheet { color: #12263f; }
+.song-reader-light .song-reader-chords { color: #0f6db5; }
+.song-reader-light .song-reader-lyrics { color: #12263f; }
+
 /* ESTILOS DE IMPRESIÓN EXCLUSIVA */
 @media print {
     body * {

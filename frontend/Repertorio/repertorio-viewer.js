@@ -330,6 +330,7 @@
         root.querySelectorAll('[data-set-instrument]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 selectedInstrument = btn.dataset.setInstrument;
+                openSubmenu = null;
                 render();
             });
         });
@@ -338,6 +339,7 @@
             btn.addEventListener('click', () => {
                 const targetIndex = Number(btn.dataset.setTranspose);
                 transpose = targetIndex - semitonesMap['C'];
+                openSubmenu = null;
                 render();
             });
         });
@@ -345,6 +347,7 @@
         root.querySelectorAll('[data-set-capo]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 capo = Number(btn.dataset.setCapo);
+                openSubmenu = null;
                 render();
             });
         });
@@ -352,6 +355,7 @@
         root.querySelectorAll('[data-set-cipher]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 selectedCipher = btn.dataset.setCipher;
+                openSubmenu = null;
                 render();
             });
         });
@@ -369,6 +373,140 @@
             content += `\n`;
         });
         return content;
+    }
+
+    function songPrintRows() {
+        const rows = [];
+        songLines().forEach(({ lyric, chord }) => {
+            const chordText = transposeChordLine(chord).replace(/\s+$/, '');
+            if (chordText) rows.push({ text: chordText, chord: true });
+            rows.push({ text: lyric, chord: false });
+        });
+        return rows;
+    }
+
+    function printSong() {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0';
+        const body = songPrintRows()
+            .map((row) => `<div class="${row.chord ? 'c' : 'l'}">${escapeText(row.text) || '&nbsp;'}</div>`)
+            .join('');
+        frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeText(song.title)}</title>
+            <style>
+                @page { margin: 18mm; }
+                body { margin: 0; background: #fff; color: #000; font-family: 'Courier New', monospace; font-size: 11pt; }
+                h1 { margin: 0 0 2pt; font-size: 16pt; }
+                p { margin: 0 0 14pt; font-size: 10pt; color: #333; }
+                div { white-space: pre-wrap; line-height: 1.35; }
+                .c { font-weight: bold; }
+            </style></head><body>
+            <h1>${escapeText(song.title)}</h1><p>${escapeText(song.author || '')}</p>${body}</body></html>`;
+        frame.onload = () => {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+            setTimeout(() => frame.remove(), 2000);
+        };
+        document.body.appendChild(frame);
+    }
+
+    // Genera un PDF simple (Courier) con letra y acordes, sin fondo ni dependencias externas
+    function buildPdfBlob() {
+        const pageWidth = 595;
+        const pageHeight = 842;
+        const margin = 50;
+        const fontSize = 10;
+        const lineHeight = 14;
+        const maxChars = Math.floor((pageWidth - margin * 2) / (fontSize * 0.6));
+        const maxLines = Math.floor((pageHeight - margin * 2) / lineHeight);
+
+        const pdfText = (value) => String(value)
+            .replace(/\t/g, '    ')
+            .replace(/[^\x20-\xFF]/g, '?')
+            .replace(/([\\()])/g, '\\$1');
+
+        const entries = [
+            { text: song.title || 'Canción', font: 'F2', size: 14, gap: 1 },
+            { text: song.author || '', font: 'F1', size: 10, gap: 1 }
+        ];
+        songLines().forEach(({ lyric, chord }) => {
+            const chordText = transposeChordLine(chord).replace(/\s+$/, '');
+            const length = Math.max(chordText.length, lyric.length, 1);
+            for (let start = 0; start < length; start += maxChars) {
+                if (chordText.slice(start, start + maxChars).trim()) {
+                    entries.push({ text: chordText.slice(start, start + maxChars), font: 'F2', size: fontSize, gap: 0 });
+                }
+                entries.push({ text: lyric.slice(start, start + maxChars), font: 'F1', size: fontSize, gap: 0 });
+            }
+        });
+
+        const pages = [[]];
+        let used = 0;
+        entries.forEach((entry) => {
+            const cost = 1 + entry.gap;
+            if (used + cost > maxLines) {
+                pages.push([]);
+                used = 0;
+            }
+            pages[pages.length - 1].push({ ...entry, row: used });
+            used += cost;
+        });
+
+        const objects = [];
+        const pageIds = pages.map((_, i) => 5 + i * 2);
+        objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+        objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+        objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>';
+        objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>';
+        pages.forEach((items, i) => {
+            const stream = items.map((item) => {
+                const y = pageHeight - margin - item.row * lineHeight - 10;
+                return `BT /${item.font} ${item.size} Tf ${margin} ${y} Td (${pdfText(item.text)}) Tj ET`;
+            }).join('\n');
+            objects[5 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`;
+            objects[6 + i * 2] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+        });
+
+        let pdf = '%PDF-1.4\n';
+        const offsets = [];
+        for (let id = 1; id < objects.length; id++) {
+            offsets[id] = pdf.length;
+            pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+        }
+        const xref = pdf.length;
+        pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+        for (let id = 1; id < objects.length; id++) {
+            pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
+        }
+        pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+
+        const bytes = new Uint8Array(pdf.length);
+        for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 255;
+        return new Blob([bytes], { type: 'application/pdf' });
+    }
+
+    function pdfFileName() {
+        return `${(song.title || 'cancion').replace(/[\\/:*?"<>|]+/g, '').trim() || 'cancion'}.pdf`;
+    }
+
+    function downloadPdf() {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(buildPdfBlob());
+        link.download = pdfFileName();
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
+    async function sharePdf() {
+        const file = new File([buildPdfBlob()], pdfFileName(), { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ files: [file], title: song.title });
+            } catch (error) {
+                if (error.name !== 'AbortError') console.error('No se pudo compartir el PDF:', error);
+            }
+        } else {
+            downloadPdf();
+        }
     }
 
     async function handleAction(action) {
@@ -395,23 +533,14 @@
             render();
         } else if (action === 'transpose-reset') {
             transpose = 0;
+            openSubmenu = null;
             render();
         } else if (action === 'print') {
-            window.print();
+            printSong();
         } else if (action === 'download-pdf') {
-            const content = generateSongText();
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
-            link.download = `${song.title || 'cancion'}.txt`;
-            link.click();
-            URL.revokeObjectURL(link.href);
+            downloadPdf();
         } else if (action === 'share-pdf') {
-            if (navigator.share) {
-                await navigator.share({
-                    title: song.title,
-                    text: generateSongText()
-                });
-            }
+            await sharePdf();
         } else if (action === 'copy') {
             try {
                 await navigator.clipboard.writeText(splitLines(song?.lyrics).join('\n'));
