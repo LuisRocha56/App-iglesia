@@ -20,11 +20,12 @@
         ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
         : 'Sin registro';
 
+    const chordRootPattern = '(?:Do|DO|Re|RE|Mi|MI|Fa|FA|Sol|SOL|La|LA|Si|SI|[A-G])(?:#|b|♯|♭)?';
+    const chordTokenRegex = new RegExp(`^${chordRootPattern}(?:maj|min|dim|aug|sus|add|m|M|[0-9]|[#b+\\-°º∆Δ]|\\([^)\\s]*\\))*(?:/${chordRootPattern})?$`);
+
     function chordLine(value) {
         const tokens = value.trim().split(/\s+/).filter(Boolean);
-        return tokens.length > 0 && tokens.length <= 16 && tokens.every((token) =>
-            /^(?:Do|Re|Mi|Fa|Sol|La|Si|[A-G])(?:[#b])?(?:m|maj|min|sus|dim|aug|add)?\d*$/.test(token)
-        );
+        return tokens.length > 0 && tokens.length <= 24 && tokens.every((token) => chordTokenRegex.test(token));
     }
 
     function parseComposer(value) {

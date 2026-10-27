@@ -321,14 +321,43 @@
     font-weight: 700;
 }
 
+.song-reader-diagrams-wrap {
+    position: relative;
+    margin: 20px 0 28px;
+}
+
 .song-reader-diagrams {
     display: flex;
     gap: 12px;
     max-width: 100%;
-    margin: 20px 0 28px;
     overflow-x: auto;
     padding-bottom: 8px;
+    scrollbar-width: none;
 }
+
+.song-reader-diagrams::-webkit-scrollbar { display: none; }
+
+.song-diagrams-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    transform: translateY(-50%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(11, 33, 63, 0.92);
+    color: #ffffff;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.song-diagrams-nav[hidden] { display: none; }
+.song-diagrams-nav.prev { left: -6px; }
+.song-diagrams-nav.next { right: -6px; }
 
 .song-chord-diagram {
     flex: 0 0 100px;
@@ -336,13 +365,18 @@
     border: 1px solid rgba(180, 205, 225, 0.15);
     border-radius: 12px;
     background: #0d284a;
+    color: inherit;
+    font: inherit;
     text-align: center;
+    cursor: pointer;
 }
+
+.song-chord-diagram:hover { border-color: #f59a3c; }
 
 .song-chord-diagram strong {
     display: block;
     margin-bottom: 6px;
-    color: #5bb3f0;
+    color: #f59a3c;
     font-size: 14px;
     font-weight: 800;
 }
@@ -350,9 +384,127 @@
 .song-chord-diagram svg { 
     display: block; 
     width: 84px; 
-    height: 100px; 
+    height: auto; 
     margin: 0 auto; 
 }
+
+/* Acordes dentro de la hoja (clic para ver el diagrama) */
+.song-chord-token {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: rgba(245, 154, 60, 0.16);
+    color: #f59a3c;
+    font: inherit;
+    font-weight: 800;
+    white-space: pre;
+    cursor: pointer;
+}
+
+.song-chord-token:hover { background: rgba(245, 154, 60, 0.35); }
+
+/* Ventana flotante del acorde */
+.song-chord-popup-layer {
+    position: fixed;
+    z-index: 300;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(2, 8, 18, 0.45);
+}
+
+.song-chord-popup {
+    width: 190px;
+    padding: 10px 16px 18px;
+    border: 1px solid rgba(180, 205, 225, 0.2);
+    border-radius: 18px;
+    background: #0d1f3a;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    text-align: center;
+}
+
+.song-chord-popup-handle {
+    display: block;
+    width: 28px;
+    height: 6px;
+    margin: 0 auto 8px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(90deg, #5f748d 0 3px, transparent 3px 6px);
+}
+
+.song-chord-popup h4 {
+    margin: 0 0 6px;
+    color: #f59a3c;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.song-chord-popup svg { display: block; width: 150px; height: auto; margin: 0 auto; }
+.song-chord-popup p { margin: 8px 0 12px; color: #9cb8d4; font-size: 13px; }
+.song-chord-popup p b { color: #f0f7fc; }
+
+.song-chord-popup-change {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: transparent;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.song-chord-popup-change:hover { background: #1686d9; }
+
+/* Dibujo de los diagramas */
+.cd-string { stroke: #7f93aa; stroke-width: 1; }
+.cd-fret { stroke: #4d6480; stroke-width: 1; }
+.cd-nut, .cd-capo, .cd-barre, .cd-dot { fill: #f4f8fc; }
+.cd-capo-text { fill: #0b213f; font-size: 7px; font-weight: 800; letter-spacing: 1px; }
+.cd-fretnum { fill: #f59a3c; font-size: 9px; font-weight: 800; }
+.cd-finger { fill: #0b213f; font-size: 8px; font-weight: 800; text-anchor: middle; }
+.cd-mark { fill: #9cb8d4; font-size: 9px; text-anchor: middle; }
+.cd-open { fill: none; stroke: #9cb8d4; stroke-width: 1.2; }
+.cd-fretted { fill: #e8f1fa; }
+.cd-key { fill: #f4f8fc; stroke: #5f748d; stroke-width: 0.5; }
+.cd-key.on { fill: #38b6ff; }
+.cd-key-black { fill: #10213a; }
+.cd-key-black.on { fill: #1686d9; }
+
+/* Control deslizante de tamaño de texto */
+.song-reader-slider-row {
+    padding: 12px 16px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    color: #e2f0fb;
+    font-size: 13px;
+}
+
+.song-reader-slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.song-reader-slider-head .item-val { color: #38b6ff; font-size: 12px; font-weight: 700; }
+
+.song-reader-slider-body {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.song-reader-slider-body input[type="range"] {
+    width: 100%;
+    accent-color: #1686d9;
+    cursor: pointer;
+}
+
+.slider-a { font-weight: 800; color: #9cb8d4; }
+.slider-a.small { font-size: 12px; }
+.slider-a.big { font-size: 20px; }
 
 /* Hoja de acordes y letra */
 .song-reader-sheet {
@@ -365,19 +517,21 @@
 }
 
 .song-reader-line {
-    min-height: 48px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
+.song-reader-line-chord { margin-bottom: 0; }
+.song-reader-line-blank { height: 0.9em; }
+
 .song-reader-chords {
-    min-height: 24px;
-    color: #38b6ff;
+    min-height: 1.5em;
+    color: #f59a3c;
     font-weight: 800;
     white-space: pre;
 }
 
 .song-reader-lyrics {
-    min-height: 25px;
+    min-height: 1.5em;
     color: #f0f7fc;
     white-space: pre-wrap;
 }
@@ -414,11 +568,35 @@
 .song-reader-light .song-reader-heading p { color: #516a85; }
 .song-reader-light .song-info-badge { background: rgba(15, 109, 181, 0.12); color: #0f6db5; }
 .song-reader-light .song-chord-diagram { border-color: rgba(18, 38, 63, 0.15); background: #ffffff; }
-.song-reader-light .song-chord-diagram strong { color: #0f6db5; }
-.song-reader-light .song-chord-diagram svg rect:not([fill="#000"]) { fill: #e6eef7; }
-.song-reader-light .song-chord-diagram svg line[stroke="#fff"] { stroke: #12263f; }
+.song-reader-light .song-chord-diagram strong,
+.song-reader-light .song-chord-popup h4,
+.song-reader-light .cd-fretnum { color: #c25e00; fill: #c25e00; }
+.song-reader-light .song-chord-token { background: rgba(194, 94, 0, 0.12); color: #c25e00; }
+.song-reader-light .song-chord-popup { background: #ffffff; border-color: rgba(18, 38, 63, 0.2); }
+.song-reader-light .song-chord-popup p { color: #516a85; }
+.song-reader-light .song-chord-popup p b { color: #12263f; }
+.song-reader-light .song-chord-popup-change { border-color: rgba(18, 38, 63, 0.25); color: #12263f; }
+.song-reader-light .song-chord-popup-change:hover { color: #ffffff; }
+.song-reader-light .song-diagrams-nav { background: #ffffff; color: #12263f; border-color: rgba(18, 38, 63, 0.2); }
+.song-reader-light .song-reader-slider-row { border-top-color: rgba(18, 38, 63, 0.1); color: #12263f; }
+.song-reader-light .slider-a { color: #516a85; }
+.song-reader-light .cd-string { stroke: #7b8da3; }
+.song-reader-light .cd-fret { stroke: #b6c4d4; }
+.song-reader-light .cd-nut,
+.song-reader-light .cd-capo,
+.song-reader-light .cd-barre,
+.song-reader-light .cd-dot,
+.song-reader-light .cd-fretted { fill: #12263f; }
+.song-reader-light .cd-capo-text,
+.song-reader-light .cd-finger { fill: #ffffff; }
+.song-reader-light .cd-mark { fill: #516a85; }
+.song-reader-light .cd-open { stroke: #516a85; }
+.song-reader-light .cd-key { fill: #ffffff; stroke: #7b8da3; }
+.song-reader-light .cd-key.on { fill: #38b6ff; }
+.song-reader-light .cd-key-black { fill: #12263f; }
+.song-reader-light .cd-key-black.on { fill: #1686d9; }
 .song-reader-light .song-reader-sheet { color: #12263f; }
-.song-reader-light .song-reader-chords { color: #0f6db5; }
+.song-reader-light .song-reader-chords { color: #c25e00; }
 .song-reader-light .song-reader-lyrics { color: #12263f; }
 
 /* ESTILOS DE IMPRESIÓN EXCLUSIVA */

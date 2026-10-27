@@ -13,6 +13,9 @@
     let menuOpen = false;
     let openSubmenu = null;
     let searchQuery = '';
+    let activeChordKey = null;
+    let currentChords = [];
+    const voicingChoice = {};
 
     let selectedInstrument = 'guitarra';
     let selectedCipher = 'spanish';
@@ -20,16 +23,35 @@
     const notesSpanish = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
     const notesEnglish = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-    const semitonesMap = {
-        C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
-        Do: 0, 'Do#': 1, Re: 2, 'Re#': 3, Mi: 4, Fa: 5, 'Fa#': 6, Sol: 7, 'Sol#': 8, La: 9, 'La#': 10, Si: 11
-    };
+    const naturalSemitones = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11, Do: 0, Re: 2, Mi: 4, Fa: 5, Sol: 7, La: 9, Si: 11 };
 
-    const chordShapesGuitar = {
-        C: [[1, 1], [2, 2], [3, 3]], D: [[1, 2], [2, 3], [3, 2]],
-        E: [[0, 1], [1, 2], [2, 2]], F: [[0, 1], [1, 2], [2, 3]],
-        G: [[4, 1], [5, 2], [6, 3]], A: [[1, 2], [2, 2], [3, 2]],
-        Am: [[1, 2], [2, 2], [3, 1]], Dm: [[1, 1], [2, 3], [3, 2]], Em: [[0, 1], [1, 2], [2, 2]]
+    // Un acorde es: raíz (inglés o español) + calidad + bajo opcional (F#/G#)
+    const chordRootPattern = '(?:Do|DO|Re|RE|Mi|MI|Fa|FA|Sol|SOL|La|LA|Si|SI|[A-G])(?:#|b|♯|♭)?';
+    const chordQualityPattern = '(?:maj|min|dim|aug|sus|add|m|M|[0-9]|[#b+\\-°º∆Δ]|\\([^)\\s]*\\))*';
+    const chordTokenRegex = new RegExp(`^(${chordRootPattern})(${chordQualityPattern})(?:/(${chordRootPattern}))?$`);
+    const chordFillerRegex = /^(?:\|\|?|\/|-|–|:|\.{2,}|\(?x\d+\)?|N\.?C\.?|[A-Za-zÁÉÍÓÚáéíóúñÑ]+:)$/;
+
+    // Formas de guitarra (cuerdas de la 6ª a la 1ª; -1 = no tocar). Las de barra se desplazan según la raíz.
+    const E_SHAPES = {
+        '': [0, 2, 2, 1, 0, 0], m: [0, 2, 2, 0, 0, 0], 7: [0, 2, 0, 1, 0, 0], m7: [0, 2, 0, 0, 0, 0],
+        maj7: [0, 2, 1, 1, 0, 0], sus4: [0, 2, 2, 2, 0, 0], sus2: [0, 2, 4, 4, 0, 0], 5: [0, 2, 2, -1, -1, -1],
+        6: [0, 2, 2, 1, 2, 0], aug: [0, 3, 2, 1, 1, 0]
+    };
+    const A_SHAPES = {
+        '': [-1, 0, 2, 2, 2, 0], m: [-1, 0, 2, 2, 1, 0], 7: [-1, 0, 2, 0, 2, 0], m7: [-1, 0, 2, 0, 1, 0],
+        maj7: [-1, 0, 2, 1, 2, 0], sus4: [-1, 0, 2, 2, 3, 0], sus2: [-1, 0, 2, 2, 0, 0], 5: [-1, 0, 2, 2, -1, -1],
+        6: [-1, 0, 2, 2, 2, 2], dim: [-1, 0, 1, 2, 1, -1], aug: [-1, 0, 3, 2, 2, 1]
+    };
+    const OPEN_SHAPES = {
+        '0:': [-1, 3, 2, 0, 1, 0], '0:7': [-1, 3, 2, 3, 1, 0], '0:maj7': [-1, 3, 2, 0, 0, 0], '0:add9': [-1, 3, 2, 0, 3, 0],
+        '2:': [-1, -1, 0, 2, 3, 2], '2:m': [-1, -1, 0, 2, 3, 1], '2:7': [-1, -1, 0, 2, 1, 2], '2:m7': [-1, -1, 0, 2, 1, 1],
+        '2:maj7': [-1, -1, 0, 2, 2, 2], '2:sus4': [-1, -1, 0, 2, 3, 3], '2:sus2': [-1, -1, 0, 2, 3, 0],
+        '5:maj7': [-1, -1, 3, 2, 1, 0], '7:': [3, 2, 0, 0, 0, 3], '7:7': [3, 2, 0, 0, 0, 1],
+        '7:maj7': [3, 2, 0, 0, 0, 2], '7:6': [3, 2, 0, 0, 0, 0], '11:7': [-1, 2, 1, 2, 0, 2]
+    };
+    const PIANO_INTERVALS = {
+        '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11], sus4: [0, 5, 7],
+        sus2: [0, 2, 7], dim: [0, 3, 6], aug: [0, 4, 8], 5: [0, 7], 6: [0, 4, 7, 9], add9: [0, 4, 7, 14]
     };
 
     const icons = {
@@ -41,6 +63,10 @@
 
     function escapeText(value) {
         return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function escapeAttr(value) {
+        return escapeText(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function splitLines(value) {
@@ -58,74 +84,321 @@
         }
     }
 
-    function transposeChord(chord) {
-        const match = chord.match(/^((?:Do|Re|Mi|Fa|Sol|La|Si|[A-G])(?:#|b)?)(.*)$/i);
-        if (!match) return chord;
+    const mod12 = (value) => ((value % 12) + 12) % 12;
+    const effectiveCapo = () => (selectedInstrument === 'piano' ? 0 : capo);
 
-        const spanishBase = { Do: 'C', Re: 'D', Mi: 'E', Fa: 'F', Sol: 'G', La: 'A', Si: 'B' };
-        let root = match[1];
-        let rootUpper = root[0].toUpperCase() + root.slice(1);
-        if (spanishBase[rootUpper]) rootUpper = spanishBase[rootUpper];
+    function noteToSemitone(note) {
+        const spanish = note.match(/^(do|re|mi|fa|sol|la|si)([#b♯♭]?)$/i);
+        const english = note.match(/^([A-G])([#b♯♭]?)$/);
+        const match = spanish || english;
+        if (!match) return null;
+        const key = spanish ? match[1][0].toUpperCase() + match[1].slice(1).toLowerCase() : match[1];
+        const accidental = match[2] === '#' || match[2] === '♯' ? 1 : match[2] ? -1 : 0;
+        return mod12(naturalSemitones[key] + accidental);
+    }
 
-        const baseSemitone = semitonesMap[rootUpper] ?? semitonesMap[root];
-        if (baseSemitone === undefined) return chord;
+    function parseChordToken(token) {
+        const match = token.match(chordTokenRegex);
+        if (!match) return null;
+        const rootSemitone = noteToSemitone(match[1]);
+        if (rootSemitone === null) return null;
+        return { root: rootSemitone, quality: match[2], bass: match[3] ? noteToSemitone(match[3]) : null, prefix: '', suffix: '' };
+    }
 
-        const newSemitone = baseSemitone + transpose - capo;
-        return `${formatChordNote(newSemitone)}${match[2]}`;
+    function parseChordWithPunctuation(token) {
+        const direct = parseChordToken(token);
+        if (direct) return direct;
+        const wrapped = token.match(/^([(\[]*)(.+?)([)\],]*)$/);
+        const inner = wrapped ? parseChordToken(wrapped[2]) : null;
+        return inner ? { ...inner, prefix: wrapped[1], suffix: wrapped[3] } : null;
+    }
+
+    // Una línea es de acordes si todos sus elementos son acordes (o separadores como | x2 Intro:)
+    function isChordLine(line) {
+        const tokens = String(line || '').trim().split(/\s+/).filter(Boolean);
+        if (!tokens.length || tokens.length > 32) return false;
+        let chords = 0;
+        for (const token of tokens) {
+            if (parseChordWithPunctuation(token)) chords += 1;
+            else if (!chordFillerRegex.test(token)) return false;
+        }
+        return chords > 0;
+    }
+
+    function chordType(quality) {
+        const text = quality.replace(/[()]/g, '');
+        if (/^(?:maj|M|∆|Δ)\d/.test(text)) return 'maj7';
+        if (/^(?:dim|°|º)/.test(text) || /^(?:m|min|-)\S*b5/.test(text)) return 'dim';
+        if (/^(?:aug|\+)/.test(text)) return 'aug';
+        if (/^(?:m(?!aj)|min|-)/.test(text)) return /^(?:m|min|-)(?:7|9|11|13)/.test(text) ? 'm7' : 'm';
+        if (/^sus2/.test(text)) return 'sus2';
+        if (/^sus/.test(text)) return 'sus4';
+        if (/^(?:7|9|11|13)/.test(text)) return '7';
+        if (/^5/.test(text)) return '5';
+        if (/^6/.test(text)) return '6';
+        if (/^add/.test(text)) return 'add9';
+        return '';
+    }
+
+    // shapeLabel = lo que se escribe en la hoja (forma con capo); soundLabel = acorde que suena realmente
+    function chordInfo(parsed) {
+        const capoShift = effectiveCapo();
+        const label = (shift) => `${formatChordNote(parsed.root + shift)}${parsed.quality}${parsed.bass === null ? '' : `/${formatChordNote(parsed.bass + shift)}`}`;
+        return {
+            shapeRoot: mod12(parsed.root + transpose - capoShift),
+            soundRoot: mod12(parsed.root + transpose),
+            type: chordType(parsed.quality),
+            shapeLabel: label(transpose - capoShift),
+            soundLabel: label(transpose)
+        };
+    }
+
+    function chordLineParts(line) {
+        const parts = [];
+        const pattern = /\S+/g;
+        let length = 0;
+        let match;
+        while ((match = pattern.exec(line))) {
+            const parsed = parseChordWithPunctuation(match[0]);
+            const info = parsed ? chordInfo(parsed) : null;
+            const text = parsed ? `${parsed.prefix}${info.shapeLabel}${parsed.suffix}` : match[0];
+            // Mantiene la alineación original aunque el cifrado cambie la longitud del acorde
+            const gap = length < match.index ? match.index - length : (length ? 1 : 0);
+            if (gap) {
+                parts.push({ text: ' '.repeat(gap), info: null });
+                length += gap;
+            }
+            parts.push({ text, info });
+            length += text.length;
+        }
+        return parts;
     }
 
     function transposeChordLine(line) {
-        return line.split(/(\s+)/).map((part) => /^\S+$/.test(part) ? transposeChord(part) : part).join('');
+        return chordLineParts(line).map((part) => part.text).join('');
+    }
+
+    function chordLineHtml(line) {
+        return chordLineParts(line).map((part) => part.info
+            ? `<button type="button" class="song-chord-token" data-chord-key="${escapeAttr(part.info.shapeLabel)}">${escapeText(part.text)}</button>`
+            : escapeText(part.text)
+        ).join('');
     }
 
     function songLines() {
         const lyrics = splitLines(song?.lyrics);
         const chords = splitLines(song?.chords);
         const count = Math.max(lyrics.length, chords.length);
-        return Array.from({ length: count }, (_, index) => ({
-            lyric: lyrics[index] || '',
-            chord: chords[index] || ''
-        }));
+        return Array.from({ length: count }, (_, index) => {
+            const lyric = lyrics[index] || '';
+            const chord = chords[index] || '';
+            // Acordes escritos como texto dentro de la letra
+            if (!chord.trim() && isChordLine(lyric)) return { lyric: '', chord: lyric, chordOnly: true };
+            return { lyric, chord };
+        });
     }
 
-    function chordDiagram(chord) {
-        const rootMatch = chord.match(/^((?:Do|Re|Mi|Fa|Sol|La|Si|[A-G])(?:#|b)?(?:m)?)/i);
-        const name = rootMatch ? transposeChord(rootMatch[1]) : chord;
-
-        if (selectedInstrument === 'piano') {
-            return `<div class="song-chord-diagram"><strong>${escapeText(name)}</strong><svg viewBox="0 0 90 60"><rect x="10" y="10" width="70" height="40" fill="#203a5e" stroke="#38b6ff"/><line x1="24" y1="10" x2="24" y2="50" stroke="#fff"/><line x1="38" y1="10" x2="38" y2="50" stroke="#fff"/><line x1="52" y1="10" x2="52" y2="50" stroke="#fff"/><line x1="66" y1="10" x2="66" y2="50" stroke="#fff"/><rect x="19" y="10" width="10" height="25" fill="#000"/><rect x="47" y="10" width="10" height="25" fill="#000"/></svg></div>`;
-        }
-
-        const dots = chordShapesGuitar[name.replace(/7|maj7|sus4|add9/g, '')] || [];
-        const numStrings = selectedInstrument === 'bajo' ? 4 : 6;
-        const lines = [];
-
-        for (let i = 0; i < numStrings; i++) {
-            const x = 15 + i * (60 / (numStrings - 1));
-            lines.push(`<line x1="${x}" y1="25" x2="${x}" y2="83" stroke="#5f748d" stroke-width="1"/>`);
-        }
-        for (let i = 0; i < 5; i++) {
-            const y = 25 + i * 12;
-            lines.push(`<line x1="15" y1="${y}" x2="75" y2="${y}" stroke="#5f748d" stroke-width="${i === 0 ? 3 : 1}"/>`);
-        }
-        dots.forEach(([string, fret]) => {
-            if (string < numStrings) {
-                lines.push(`<circle cx="${15 + (string - 1) * (60 / (numStrings - 1))}" cy="${25 + fret * 12 - 6}" r="4" fill="#38b6ff"/>`);
+    function originalKey() {
+        for (const { chord } of songLines()) {
+            const pattern = /\S+/g;
+            let match;
+            while ((match = pattern.exec(chord))) {
+                const parsed = parseChordWithPunctuation(match[0]);
+                if (parsed) return parsed.root;
             }
+        }
+        return 0;
+    }
+
+    function barreFor(frets, fret) {
+        if (fret <= 0) return null;
+        const strings = frets.map((value, index) => (value === fret ? index : -1)).filter((index) => index >= 0);
+        return strings.length < 2 ? null : { fret, from: strings[0], to: strings[strings.length - 1] };
+    }
+
+    function guitarVoicings(rootSemitone, type) {
+        const list = [];
+        const seen = new Set();
+        const add = (frets, barreFret) => {
+            const key = frets.join(',');
+            if (seen.has(key)) return;
+            seen.add(key);
+            list.push({ frets, barre: barreFor(frets, barreFret) });
+        };
+        const collect = (shape) => {
+            if (OPEN_SHAPES[`${rootSemitone}:${shape}`]) add(OPEN_SHAPES[`${rootSemitone}:${shape}`], 0);
+            if (E_SHAPES[shape]) {
+                const fret = mod12(rootSemitone - 4);
+                add(E_SHAPES[shape].map((value) => (value < 0 ? -1 : value + fret)), fret);
+            }
+            if (A_SHAPES[shape]) {
+                const fret = mod12(rootSemitone - 9);
+                add(A_SHAPES[shape].map((value) => (value < 0 ? -1 : value + fret)), fret);
+            }
+        };
+        collect(type);
+        if (!list.length) collect(type.startsWith('m') && type !== 'maj7' ? 'm' : '');
+        return list.sort((a, b) => Math.max(...a.frets) - Math.max(...b.frets));
+    }
+
+    function bassVoicings(rootSemitone) {
+        const onE = mod12(rootSemitone - 4);
+        const onA = mod12(rootSemitone - 9);
+        return [{ frets: [onE, -1, -1, -1], barre: null }, { frets: [-1, onA, -1, -1], barre: null }];
+    }
+
+    function pianoVoicings(rootSemitone, type) {
+        const base = (PIANO_INTERVALS[type] || PIANO_INTERVALS['']).map((interval) => rootSemitone + interval);
+        return [0, 1, 2]
+            .filter((inversion) => inversion < base.length)
+            .map((inversion) => ({ notes: new Set(base.map((note, index) => (index < inversion ? note + 12 : note) % 24)) }));
+    }
+
+    function voicingsFor(info) {
+        if (selectedInstrument === 'piano') return pianoVoicings(info.shapeRoot, info.type);
+        if (selectedInstrument === 'bajo') return bassVoicings(info.shapeRoot);
+        return guitarVoicings(info.shapeRoot, info.type);
+    }
+
+    function voicingKey(info) {
+        return `${selectedInstrument}|${info.shapeRoot}|${info.type}`;
+    }
+
+    function currentVoicing(info) {
+        const list = voicingsFor(info);
+        const index = (voicingChoice[voicingKey(info)] || 0) % list.length;
+        return { voicing: list[index], count: list.length };
+    }
+
+    function fretboardSvg(frets, barre, capoFret, showMuted) {
+        const count = frets.length;
+        const left = 15;
+        const width = 60;
+        const spacing = width / (count - 1);
+        const top = 28;
+        const rowHeight = 15;
+        const rows = 5;
+        const positive = frets.filter((fret) => fret > 0);
+        const start = positive.length && Math.max(...positive) > rows ? Math.min(...positive) : 1;
+        const x = (index) => left + index * spacing;
+        const parts = [];
+
+        if (capoFret > 0) {
+            parts.push(`<rect class="cd-capo" x="${left - 6}" y="${top - 15}" width="${width + 12}" height="12" rx="4"/>`);
+            parts.push(`<text class="cd-capo-text" x="${left + width / 2}" y="${top - 6}" text-anchor="middle">C A P O</text>`);
+        } else if (start === 1) {
+            parts.push(`<rect class="cd-nut" x="${left}" y="${top - 2}" width="${width}" height="4"/>`);
+        }
+        for (let i = 0; i < count; i++) {
+            parts.push(`<line class="cd-string" x1="${x(i)}" y1="${top}" x2="${x(i)}" y2="${top + rows * rowHeight}"/>`);
+        }
+        for (let r = 0; r <= rows; r++) {
+            parts.push(`<line class="cd-fret" x1="${left}" y1="${top + r * rowHeight}" x2="${left + width}" y2="${top + r * rowHeight}"/>`);
+        }
+        if (start > 1) {
+            parts.push(`<text class="cd-fretnum" x="2" y="${top + rowHeight / 2 + 3}">${start + capoFret}</text>`);
+        } else if (capoFret > 0) {
+            parts.push(`<text class="cd-fretnum" x="2" y="${top - 5}">${capoFret}</text>`);
+        }
+
+        if (barre) {
+            parts.push(`<rect class="cd-barre" x="${x(barre.from) - 5}" y="${top + (barre.fret - start) * rowHeight + 3}" width="${x(barre.to) - x(barre.from) + 10}" height="${rowHeight - 6}" rx="4"/>`);
+        }
+
+        const fingered = [];
+        frets.forEach((fret, index) => {
+            const covered = barre && fret === barre.fret && index >= barre.from && index <= barre.to;
+            if (fret > 0 && !covered) fingered.push({ index, fret });
+        });
+        fingered.sort((a, b) => a.fret - b.fret || a.index - b.index);
+        fingered.forEach(({ index, fret }, order) => {
+            const cx = x(index);
+            const cy = top + (fret - start) * rowHeight + rowHeight / 2;
+            parts.push(`<circle class="cd-dot" cx="${cx}" cy="${cy}" r="5.5"/><text class="cd-finger" x="${cx}" y="${cy + 3}">${Math.min(4, order + (barre ? 2 : 1))}</text>`);
         });
 
-        return `<div class="song-chord-diagram"><strong>${escapeText(name)}</strong><svg viewBox="0 0 90 100">${lines.join('')}</svg></div>`;
+        const markY = top + rows * rowHeight + 12;
+        frets.forEach((fret, index) => {
+            if (fret < 0) {
+                if (showMuted) parts.push(`<text class="cd-mark" x="${x(index)}" y="${markY + 3}">×</text>`);
+            } else if (fret === 0) {
+                parts.push(`<circle class="cd-open" cx="${x(index)}" cy="${markY}" r="3"/>`);
+            } else {
+                parts.push(`<circle class="cd-fretted" cx="${x(index)}" cy="${markY}" r="2.5"/>`);
+            }
+        });
+        return `<svg viewBox="0 0 90 ${top + rows * rowHeight + 20}" role="img" aria-hidden="true">${parts.join('')}</svg>`;
+    }
+
+    function pianoSvg(notes) {
+        const whitePitches = [0, 2, 4, 5, 7, 9, 11];
+        const blackPositions = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
+        const keyWidth = 7;
+        const parts = [];
+        for (let i = 0; i < 14; i++) {
+            const pitch = whitePitches[i % 7] + 12 * Math.floor(i / 7);
+            parts.push(`<rect class="cd-key${notes.has(pitch) ? ' on' : ''}" x="${i * keyWidth}" y="8" width="${keyWidth}" height="44"/>`);
+        }
+        for (let octave = 0; octave < 2; octave++) {
+            Object.entries(blackPositions).forEach(([pitch, whiteIndex]) => {
+                const note = Number(pitch) + 12 * octave;
+                const xPos = (octave * 7 + whiteIndex) * keyWidth + keyWidth - 2.3;
+                parts.push(`<rect class="cd-key-black${notes.has(note) ? ' on' : ''}" x="${xPos}" y="8" width="4.6" height="28" rx="1"/>`);
+            });
+        }
+        return `<svg viewBox="0 0 98 60" role="img" aria-hidden="true">${parts.join('')}</svg>`;
+    }
+
+    function diagramSvg(info) {
+        const { voicing } = currentVoicing(info);
+        if (selectedInstrument === 'piano') return pianoSvg(voicing.notes);
+        return fretboardSvg(voicing.frets, voicing.barre, effectiveCapo(), selectedInstrument !== 'bajo');
+    }
+
+    function chordDisplayName(info) {
+        return `${info.shapeLabel}${effectiveCapo() % 12 ? '*' : ''}`;
+    }
+
+    function chordCardMarkup(info) {
+        return `
+            <button type="button" class="song-chord-diagram" data-chord-key="${escapeAttr(info.shapeLabel)}" aria-label="Ver acorde ${escapeAttr(info.shapeLabel)}">
+                <strong>${escapeText(chordDisplayName(info))}</strong>
+                ${diagramSvg(info)}
+            </button>`;
+    }
+
+    function chordPopupMarkup() {
+        const info = activeChordKey && currentChords.find((chord) => chord.shapeLabel === activeChordKey);
+        if (!info) return '';
+        const differs = effectiveCapo() % 12 && info.soundLabel !== info.shapeLabel;
+        const subtitle = differs
+            ? `<b>${escapeText(info.soundLabel)}</b> con forma de <b>${escapeText(info.shapeLabel)}</b>`
+            : `<b>${escapeText(info.shapeLabel)}</b>`;
+        return `
+            <div class="song-chord-popup-layer" data-action="chord-close">
+                <div class="song-chord-popup" role="dialog" aria-label="Acorde ${escapeAttr(info.shapeLabel)}">
+                    <span class="song-chord-popup-handle"></span>
+                    <h4>${escapeText(chordDisplayName(info))}</h4>
+                    ${diagramSvg(info)}
+                    <p>${subtitle}</p>
+                    <button type="button" class="song-chord-popup-change" data-action="chord-change">Cambiar</button>
+                </div>
+            </div>`;
     }
 
     function uniqueChords() {
         const found = [];
         songLines().forEach(({ chord }) => {
-            chord.split(/\s+/).filter(Boolean).forEach((value) => {
-                const normalized = transposeChord(value);
-                if (!found.includes(normalized)) found.push(normalized);
-            });
+            const pattern = /\S+/g;
+            let match;
+            while ((match = pattern.exec(chord))) {
+                const parsed = parseChordWithPunctuation(match[0]);
+                if (!parsed) continue;
+                const info = chordInfo(parsed);
+                if (!found.some((item) => item.shapeLabel === info.shapeLabel)) found.push(info);
+            }
         });
-        return found.slice(0, 10);
+        return found;
     }
 
     function sheetMarkup() {
@@ -133,17 +406,19 @@
         if (!lines.length || !lines.some(({ lyric, chord }) => lyric || chord)) {
             return '<p class="song-reader-empty">Esta canción todavía no tiene letra.</p>';
         }
-        return lines.map(({ lyric, chord }) => `
-            <div class="song-reader-line">
-                <div class="song-reader-chords">${escapeText(transposeChordLine(chord))}</div>
-                <div class="song-reader-lyrics">${escapeText(lyric)}</div>
-            </div>
-        `).join('');
+        return lines.map(({ lyric, chord, chordOnly }) => {
+            if (!lyric && !chord) return '<div class="song-reader-line song-reader-line-blank"></div>';
+            return `
+            <div class="song-reader-line${chordOnly ? ' song-reader-line-chord' : ''}">
+                ${chord ? `<div class="song-reader-chords">${chordLineHtml(chord)}</div>` : ''}
+                ${lyric ? `<div class="song-reader-lyrics">${escapeText(lyric)}</div>` : ''}
+            </div>`;
+        }).join('');
     }
 
     function menuMarkup() {
         const showCapo = selectedInstrument !== 'piano';
-        const currentNoteName = formatChordNote(semitonesMap['C'] + transpose);
+        const currentNoteName = formatChordNote(originalKey() + transpose);
 
         return `
             <div class="song-reader-toolbar">
@@ -162,8 +437,14 @@
                 <div class="song-reader-menu-section">
                     <h3>Vista</h3>
                     <button class="song-reader-menu-item" data-action="theme"><span>Tema</span><span class="item-val">${lightMode ? 'Claro' : 'Oscuro'}</span></button>
-                    <button class="song-reader-menu-item" data-action="font-down"><span>Texto</span><span class="item-val">100%</span></button>
-                    <button class="song-reader-menu-item" data-action="font-up"><span>Aumentar texto</span><span class="item-val">+</span></button>
+                    <div class="song-reader-slider-row">
+                        <div class="song-reader-slider-head"><span>Texto</span><span class="item-val" id="songFontValue">${Math.round(fontScale * 100)}%</span></div>
+                        <div class="song-reader-slider-body">
+                            <span class="slider-a small">A</span>
+                            <input type="range" id="songFontRange" min="70" max="180" step="5" value="${Math.round(fontScale * 100)}" aria-label="Tamaño del texto">
+                            <span class="slider-a big">A</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="song-reader-menu-section">
@@ -192,10 +473,12 @@
                         <div class="tone-controls">
                             <button class="tone-btn" data-action="transpose-down">-1/2 tono</button>
                             <button class="tone-btn" data-action="transpose-up">+1/2 tono</button>
+                            <button class="tone-btn" data-action="transpose-down-full">-1 tono</button>
+                            <button class="tone-btn" data-action="transpose-up-full">+1 tono</button>
                         </div>
                         <div class="options-grid">
                             ${notesSpanish.map((note, idx) => `
-                                <button class="option-btn ${((semitonesMap['C'] + transpose) % 12 + 12) % 12 === idx ? 'selected' : ''}" data-set-transpose="${idx}">
+                                <button class="option-btn ${mod12(originalKey() + transpose) === idx ? 'selected' : ''}" data-set-transpose="${idx}">
                                     ${formatChordNote(idx)}
                                 </button>
                             `).join('')}
@@ -207,7 +490,7 @@
                     ${showCapo ? `
                     <button class="song-reader-menu-item ${openSubmenu === 'capo' ? 'active' : ''}" data-toggle-submenu="capo">
                         <span>Capo</span>
-                        <span class="item-val">${capo === 0 ? 'Sin capo' : `${capo}.er traste`} ›</span>
+                        <span class="item-val">${capo === 0 ? 'Sin capo' : `${capo}º traste`} ›</span>
                     </button>
                     <div class="song-reader-submenu ${openSubmenu === 'capo' ? 'open' : ''}">
                         <div class="options-grid">
@@ -247,8 +530,15 @@
         root.className = `song-reader${lightMode ? ' song-reader-light' : ''}`;
         root.dataset.menuOpen = menuOpen ? 'true' : 'false';
 
-        const currentTone = formatChordNote(semitonesMap['C'] + transpose);
-        const capoText = capo > 0 ? ` · Capo: ${capo}.er traste` : '';
+        const currentTone = formatChordNote(originalKey() + transpose);
+        const capoText = effectiveCapo() > 0 ? ` · Capo: ${effectiveCapo()}º traste` : '';
+        currentChords = uniqueChords();
+        if (activeChordKey && !currentChords.some((chord) => chord.shapeLabel === activeChordKey)) activeChordKey = null;
+
+        const previous = {
+            main: root.querySelector('.song-reader-main')?.scrollTop,
+            strip: root.querySelector('#songDiagrams')?.scrollLeft
+        };
 
         root.innerHTML = `
             <aside class="song-reader-sidebar">${menuMarkup()}</aside>
@@ -262,7 +552,12 @@
                             <span class="song-info-badge">Tono: ${currentTone}${capoText}</span>
                         </div>
                     </div>
-                    <div class="song-reader-diagrams">${uniqueChords().map(chordDiagram).join('')}</div>
+                    ${currentChords.length ? `
+                    <div class="song-reader-diagrams-wrap">
+                        <button type="button" class="song-diagrams-nav prev" data-action="diagrams-prev" aria-label="Acordes anteriores" hidden>‹</button>
+                        <div class="song-reader-diagrams" id="songDiagrams">${currentChords.map(chordCardMarkup).join('')}</div>
+                        <button type="button" class="song-diagrams-nav next" data-action="diagrams-next" aria-label="Más acordes" hidden>›</button>
+                    </div>` : ''}
                     <article class="song-reader-sheet" style="font-size:${fontScale}em">
                         <section class="song-reader-section">
                             ${sheetMarkup()}
@@ -270,7 +565,35 @@
                     </article>
                 </div>
             </main>
+            ${chordPopupMarkup()}
         `;
+
+        if (previous.main !== undefined) root.querySelector('.song-reader-main').scrollTop = previous.main;
+        const strip = root.querySelector('#songDiagrams');
+        if (strip) {
+            if (previous.strip !== undefined) strip.scrollLeft = previous.strip;
+            const updateNav = () => {
+                root.querySelector('.song-diagrams-nav.prev').hidden = strip.scrollLeft <= 2;
+                root.querySelector('.song-diagrams-nav.next').hidden = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2;
+            };
+            strip.addEventListener('scroll', updateNav);
+            updateNav();
+        }
+
+        const fontRange = root.querySelector('#songFontRange');
+        fontRange.addEventListener('input', () => {
+            fontScale = Number(fontRange.value) / 100;
+            root.querySelector('.song-reader-sheet').style.fontSize = `${fontScale}em`;
+            root.querySelector('#songFontValue').textContent = `${fontRange.value}%`;
+        });
+
+        root.querySelectorAll('[data-chord-key]').forEach((element) => {
+            element.addEventListener('click', () => {
+                activeChordKey = element.dataset.chordKey;
+                render();
+            });
+        });
+        root.querySelector('.song-chord-popup')?.addEventListener('click', (event) => event.stopPropagation());
 
         const searchInput = root.querySelector('#songReaderSearch');
         const searchResults = root.querySelector('#songReaderSearchResults');
@@ -338,7 +661,8 @@
         root.querySelectorAll('[data-set-transpose]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const targetIndex = Number(btn.dataset.setTranspose);
-                transpose = targetIndex - semitonesMap['C'];
+                transpose = targetIndex - originalKey();
+                transpose = mod12(transpose) > 6 ? mod12(transpose) - 12 : mod12(transpose);
                 openSubmenu = null;
                 render();
             });
@@ -380,7 +704,7 @@
         songLines().forEach(({ lyric, chord }) => {
             const chordText = transposeChordLine(chord).replace(/\s+$/, '');
             if (chordText) rows.push({ text: chordText, chord: true });
-            rows.push({ text: lyric, chord: false });
+            if (lyric || !chordText) rows.push({ text: lyric, chord: false });
         });
         return rows;
     }
@@ -435,7 +759,9 @@
                 if (chordText.slice(start, start + maxChars).trim()) {
                     entries.push({ text: chordText.slice(start, start + maxChars), font: 'F2', size: fontSize, gap: 0 });
                 }
-                entries.push({ text: lyric.slice(start, start + maxChars), font: 'F1', size: fontSize, gap: 0 });
+                if (lyric || !chordText) {
+                    entries.push({ text: lyric.slice(start, start + maxChars), font: 'F1', size: fontSize, gap: 0 });
+                }
             }
         });
 
@@ -519,22 +845,33 @@
         } else if (action === 'theme') {
             lightMode = !lightMode;
             render();
-        } else if (action === 'font-up') {
-            fontScale = Math.min(1.5, fontScale + .1);
-            render();
-        } else if (action === 'font-down') {
-            fontScale = Math.max(.8, fontScale - .1);
-            render();
         } else if (action === 'transpose-up') {
             transpose += 1;
             render();
         } else if (action === 'transpose-down') {
             transpose -= 1;
             render();
+        } else if (action === 'transpose-up-full') {
+            transpose += 2;
+            render();
+        } else if (action === 'transpose-down-full') {
+            transpose -= 2;
+            render();
         } else if (action === 'transpose-reset') {
             transpose = 0;
             openSubmenu = null;
             render();
+        } else if (action === 'diagrams-prev' || action === 'diagrams-next') {
+            root.querySelector('#songDiagrams')?.scrollBy({ left: action === 'diagrams-next' ? 320 : -320, behavior: 'smooth' });
+        } else if (action === 'chord-close') {
+            activeChordKey = null;
+            render();
+        } else if (action === 'chord-change') {
+            const info = currentChords.find((chord) => chord.shapeLabel === activeChordKey);
+            if (info) {
+                voicingChoice[voicingKey(info)] = (voicingChoice[voicingKey(info)] || 0) + 1;
+                render();
+            }
         } else if (action === 'print') {
             printSong();
         } else if (action === 'download-pdf') {
@@ -543,7 +880,8 @@
             await sharePdf();
         } else if (action === 'copy') {
             try {
-                await navigator.clipboard.writeText(splitLines(song?.lyrics).join('\n'));
+                const lyricsOnly = songLines().filter(({ chordOnly }) => !chordOnly).map(({ lyric }) => lyric);
+                await navigator.clipboard.writeText(lyricsOnly.join('\n'));
             } catch (error) {
                 console.error('No se pudo copiar la letra:', error);
             }
@@ -555,9 +893,10 @@
         transpose = 0;
         capo = 0;
         openSubmenu = null;
+        activeChordKey = null;
         menuOpen = keepMenu ? menuOpen : false;
         if (!keepMenu) searchQuery = '';
-        root.scrollTop = 0;
+        root.replaceChildren();
         render();
         root.hidden = false;
         document.body.style.overflow = 'hidden';
