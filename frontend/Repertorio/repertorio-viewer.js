@@ -6,17 +6,15 @@
     document.body.appendChild(root);
 
     let song = null;
-    let transpose = 0; // Semitonos transpuestos
-    let capo = 0; // Traste de capo
+    let transpose = 0;
+    let capo = 0;
     let fontScale = 1;
     let lightMode = false;
     let menuOpen = false;
-    
-    // Subpanel actualmente abierto ('tone', 'capo', 'instrument', 'cipher' o null)
-    let openSubmenu = null;
+    let openSubmenu = null; // Guardará el submenú activo ('instrument', 'tone', 'capo', 'cipher')
 
-    let selectedInstrument = 'guitarra'; // 'guitarra', 'electrica', 'piano', 'bajo'
-    let selectedCipher = 'spanish'; // 'english', 'spanish', 'uppercase'
+    let selectedInstrument = 'guitarra';
+    let selectedCipher = 'spanish';
 
     const notesSpanish = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
     const notesEnglish = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -165,7 +163,7 @@
                 <div class="song-reader-menu-section">
                     <h3>Ajustes Musicales</h3>
                     
-                    <!-- 1. Ítem Instrumento -->
+                    <!-- 1. Instrumento -->
                     <button class="song-reader-menu-item ${openSubmenu === 'instrument' ? 'active' : ''}" data-toggle-submenu="instrument">
                         <span>Instrumento</span>
                         <span class="item-val">${selectedInstrument.charAt(0).toUpperCase() + selectedInstrument.slice(1)} ›</span>
@@ -179,7 +177,7 @@
                         </div>
                     </div>
 
-                    <!-- 2. Ítem Tono (-1/2 tono, +1/2 tono y tonos directos) -->
+                    <!-- 2. Tono -->
                     <button class="song-reader-menu-item ${openSubmenu === 'tone' ? 'active' : ''}" data-toggle-submenu="tone">
                         <span>Tono</span>
                         <span class="item-val">${currentNoteName} (${transpose === 0 ? 'Original' : `${transpose > 0 ? '+' : ''}${transpose / 2} T`}) ›</span>
@@ -199,7 +197,7 @@
                         ${transpose !== 0 ? `<button class="reset-btn" data-action="transpose-reset">Restaurar tono original</button>` : ''}
                     </div>
 
-                    <!-- 3. Ítem Capo (Desplegable) -->
+                    <!-- 3. Capo -->
                     ${showCapo ? `
                     <button class="song-reader-menu-item ${openSubmenu === 'capo' ? 'active' : ''}" data-toggle-submenu="capo">
                         <span>Capo</span>
@@ -217,7 +215,7 @@
                     </div>
                     ` : ''}
 
-                    <!-- 4. Ítem Cifrado (Desplegable) -->
+                    <!-- 4. Cifrado -->
                     <button class="song-reader-menu-item ${openSubmenu === 'cipher' ? 'active' : ''}" data-toggle-submenu="cipher">
                         <span>Cifrado</span>
                         <span class="item-val">${selectedCipher === 'english' ? 'C D E' : selectedCipher === 'spanish' ? 'Do Re Mi' : 'DO RE MI'} ›</span>
@@ -268,16 +266,17 @@
             </main>
         `;
 
-        // Handlers para abrir/cerrar submenús laterales
+        // Desplegar/cerrar submenús
         root.querySelectorAll('[data-toggle-submenu]').forEach((button) => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const target = button.dataset.toggleSubmenu;
                 openSubmenu = openSubmenu === target ? null : target;
                 render();
             });
         });
 
-        // Handlers para selección de opciones
+        // Eventos de botones internos
         root.querySelectorAll('[data-set-instrument]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 selectedInstrument = btn.dataset.setInstrument;
@@ -307,7 +306,6 @@
             });
         });
 
-        // Acciones generales
         root.querySelectorAll('[data-action]').forEach((button) => {
             button.addEventListener('click', () => handleAction(button.dataset.action));
         });

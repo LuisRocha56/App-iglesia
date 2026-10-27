@@ -22,8 +22,10 @@
 /* Sidebar lateral de controles */
 .song-reader-sidebar {
     position: relative;
-    z-index: 2;
+    z-index: 10;
+    /* PERMITE QUE LOS SUBMENÚS FLOTANTES SALGAN HACIA LA DERECHA SIN RECORTARSE */
     overflow-y: auto;
+    overflow-x: visible;
     padding: 24px 20px;
     border-right: 1px solid rgba(180, 205, 225, 0.15);
     background: #0b213f;
@@ -60,8 +62,10 @@
     gap: 14px;
 }
 
+/* Sección contenedora del menú */
 .song-reader-menu-section {
-    overflow: hidden;
+    position: relative; /* Base de referencia para el desplegable flotante */
+    overflow: visible !important; /* Importante para permitir que el desplegable salga hacia un lado */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     background: rgba(7, 24, 47, 0.5);
@@ -77,8 +81,9 @@
     text-transform: uppercase;
 }
 
-/* Botones del menú principal */
+/* Botón disparador del submenú */
 .song-reader-menu-item {
+    position: relative;
     display: flex;
     width: 100%;
     align-items: center;
@@ -103,36 +108,37 @@
 }
 
 .song-reader-menu-item.active {
-    background: rgba(22, 134, 217, 0.2);
+    background: rgba(22, 134, 217, 0.25);
     color: #ffffff;
 }
 
-/* Subpaneles Desplegables (Drawer lateral / inline) */
+/* SUBMENÚ FLOTANTE LATERAL (WEB / PANTALLAS EN ESCRITORIO) */
 .song-reader-submenu {
     display: none;
-    padding: 14px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background: #071a33;
-    animation: fadeIn 0.2s ease-in-out;
+    position: absolute;
+    left: 100%; /* Sale exactamente a la derecha del panel */
+    top: -10px;
+    margin-left: 12px;
+    width: 270px;
+    z-index: 100;
+    padding: 16px;
+    border: 1px solid rgba(180, 205, 225, 0.25);
+    border-radius: 16px;
+    background: #0b213f;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    animation: popupFade 0.2s ease-out;
 }
 
 .song-reader-submenu.open {
     display: block;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes popupFade {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
-.submenu-title {
-    margin: 0 0 12px;
-    color: #5bb3f0;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-/* Grilla de opciones para Instrumentos / Tono / Capo / Cifrado */
+/* Estilos de la grilla interna del panel desplegado */
 .options-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -161,7 +167,7 @@
 }
 
 .option-btn:hover {
-    background: rgba(22, 134, 217, 0.25);
+    background: rgba(22, 134, 217, 0.3);
     border-color: #1686d9;
 }
 
@@ -203,7 +209,7 @@
 
 .reset-btn {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 10px;
     padding: 6px;
     border: 0;
     background: transparent;
@@ -218,7 +224,7 @@
     text-decoration: underline;
 }
 
-/* Área de lectura */
+/* Área de lectura principal */
 .song-reader-main {
     min-width: 0;
     overflow: auto;
@@ -257,7 +263,6 @@
     font-weight: 700;
 }
 
-/* Diagramas de acordes */
 .song-reader-diagrams {
     display: flex;
     gap: 12px;
@@ -291,7 +296,7 @@
     margin: 0 auto; 
 }
 
-/* Hoja e Impresión */
+/* Hoja de acordes y letra */
 .song-reader-sheet {
     max-width: 850px;
     margin: 0 auto;
@@ -319,7 +324,7 @@
     white-space: pre-wrap;
 }
 
-/* ESTILOS DE IMPRESIÓN EXCLUSIVA DE TEXTO */
+/* ESTILOS DE IMPRESIÓN EXCLUSIVA */
 @media print {
     body * {
         visibility: hidden !important;
@@ -352,8 +357,11 @@
     }
 }
 
+/* ADAPTACIÓN MÓVIL (PANTALLAS PEQUEÑAS < 800px) */
 @media (max-width: 800px) {
-    .song-reader { grid-template-columns: 1fr; }
+    .song-reader { 
+        grid-template-columns: 1fr; 
+    }
     .song-reader-sidebar {
         position: absolute;
         z-index: 4;
@@ -361,7 +369,26 @@
         width: min(88vw, 340px);
         transform: translateX(-105%);
         transition: transform 0.25s ease;
+        overflow-y: auto;
     }
-    .song-reader[data-menu-open="true"] .song-reader-sidebar { transform: translateX(0); }
-    .song-reader-content { padding: 16px 18px 55px; }
+    .song-reader[data-menu-open="true"] .song-reader-sidebar { 
+        transform: translateX(0); 
+    }
+    .song-reader-content { 
+        padding: 16px 18px 55px; 
+    }
+
+    /* EN MÓVIL: EL SUBMENÚ DEJA DE SER FLOTANTE LATERAL Y SE CONVIERTE EN INLINE/ACORDEÓN
+       PARA EVITAR QUE SE SALGA DE LA PANTALLA TÁCTIL */
+    .song-reader-submenu {
+        position: static;
+        width: 100%;
+        margin-left: 0;
+        margin-top: 6px;
+        box-shadow: none;
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(5, 19, 38, 0.9);
+        border-radius: 0 0 12px 12px;
+    }
 }
