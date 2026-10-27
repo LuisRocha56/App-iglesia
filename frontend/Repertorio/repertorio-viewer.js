@@ -12,6 +12,7 @@
     let lightMode = false;
     let menuOpen = false;
     let openSubmenu = null;
+    let searchQuery = '';
 
     let selectedInstrument = 'guitarra';
     let selectedCipher = 'spanish';
@@ -152,6 +153,11 @@
                 <button class="song-reader-icon-button" data-action="share-pdf" aria-label="Compartir texto">↗</button>
             </div>
 
+            <div class="song-reader-search">
+                <input type="search" id="songReaderSearch" placeholder="Buscar otra canción…" autocomplete="off" value="${escapeText(searchQuery).replace(/"/g, '&quot;')}" aria-label="Buscar otra canción">
+                <div class="song-reader-search-results" id="songReaderSearchResults" hidden></div>
+            </div>
+
             <div class="song-reader-menu">
                 <div class="song-reader-menu-section">
                     <h3>Vista</h3>
@@ -266,6 +272,50 @@
             </main>
         `;
 
+        const searchInput = root.querySelector('#songReaderSearch');
+        const searchResults = root.querySelector('#songReaderSearchResults');
+
+        function renderSearchResults() {
+            searchResults.replaceChildren();
+            const query = searchQuery.trim().toLocaleLowerCase('es-MX');
+            if (!query) {
+                searchResults.hidden = true;
+                return;
+            }
+            const all = typeof window.getRepertorioSongs === 'function' ? window.getRepertorioSongs() : [];
+            const matches = all
+                .filter((item) => `${item.title} ${item.author || ''}`.toLocaleLowerCase('es-MX').includes(query))
+                .slice(0, 8);
+            if (!matches.length) {
+                const empty = document.createElement('p');
+                empty.className = 'song-reader-search-empty';
+                empty.textContent = 'Sin resultados';
+                searchResults.appendChild(empty);
+            }
+            matches.forEach((item) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'song-reader-search-item';
+                const title = document.createElement('strong');
+                title.textContent = item.title;
+                const author = document.createElement('span');
+                author.textContent = item.author || 'Autor no registrado';
+                button.append(title, author);
+                button.addEventListener('click', () => {
+                    searchQuery = '';
+                    window.openSongViewer(item, { keepMenu: true });
+                });
+                searchResults.appendChild(button);
+            });
+            searchResults.hidden = false;
+        }
+
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value;
+            renderSearchResults();
+        });
+        renderSearchResults();
+
         // Desplegar/cerrar submenús
         root.querySelectorAll('[data-toggle-submenu]').forEach((button) => {
             button.addEventListener('click', (e) => {
@@ -371,12 +421,14 @@
         }
     }
 
-    window.openSongViewer = (selectedSong) => {
+    window.openSongViewer = (selectedSong, { keepMenu = false } = {}) => {
         song = selectedSong;
         transpose = 0;
         capo = 0;
         openSubmenu = null;
-        menuOpen = false;
+        menuOpen = keepMenu ? menuOpen : false;
+        if (!keepMenu) searchQuery = '';
+        root.scrollTop = 0;
         render();
         root.hidden = false;
         document.body.style.overflow = 'hidden';

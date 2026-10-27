@@ -6,6 +6,7 @@
     let composerLines = [];
     let activeChordInput = null;
     let canManageChords = true;
+    window.getRepertorioSongs = () => songs;
 
     const $ = (selector) => document.querySelector(selector);
     const text = (parent, tag, className, value) => {

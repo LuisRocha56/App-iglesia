@@ -112,6 +112,62 @@
     color: #ffffff;
 }
 
+/* Buscador de canciones dentro del lector */
+.song-reader-search {
+    margin-bottom: 18px;
+}
+
+.song-reader-search input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+}
+
+.song-reader-search input:focus {
+    outline: none;
+    border-color: #1686d9;
+}
+
+.song-reader-search-results {
+    display: grid;
+    margin-top: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(7, 24, 47, 0.8);
+}
+
+.song-reader-search-item {
+    display: grid;
+    gap: 2px;
+    padding: 10px 14px;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: transparent;
+    color: #e2f0fb;
+    text-align: left;
+    cursor: pointer;
+}
+
+.song-reader-search-item:first-child { border-top: 0; }
+.song-reader-search-item:hover { background: rgba(22, 134, 217, 0.25); }
+.song-reader-search-item span { color: #8fb4d4; font-size: 11px; }
+
+.song-reader-search-empty {
+    margin: 0;
+    padding: 12px 14px;
+    color: #8fb4d4;
+    font-size: 12px;
+}
+
 /* SUBMENÚ FLOTANTE QUE SOBREPASO EL ANCHO Y SE PONE POR ENCIMA */
 .song-reader-submenu {
     display: none;
