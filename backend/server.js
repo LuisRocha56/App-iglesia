@@ -851,6 +851,7 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
         }
         const canSeeTeam = userResult.rows[0]
             && getUserRoles(userResult.rows[0]).areas.some((area) => [1, 2, 3, 4, 5].includes(area));
+        const canSeeProgram = Boolean(canSeeTeam);
         await pool.query(
             `DELETE FROM service_assignments a
              USING service_events e
@@ -887,7 +888,7 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
                         )
                         FROM service_songs ss
                         JOIN songs s ON s.id = ss.song_id
-                        WHERE ss.event_id = e.id
+                        WHERE ss.event_id = e.id AND $2::boolean
                     ) AS songs
              FROM service_events e
              LEFT JOIN service_assignments a ON a.event_id = e.id AND $1::boolean
@@ -897,7 +898,7 @@ app.get('/api/services', getAuthenticatedUser, async (req, res, next) => {
              GROUP BY e.id
              ORDER BY e.starts_at
              LIMIT 100`,
-            [Boolean(canSeeTeam)]
+            [Boolean(canSeeTeam), canSeeProgram]
         );
         res.json({ success: true, services: result.rows });
     } catch (error) {
@@ -1666,6 +1667,51 @@ app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req
             [req.auth.sub, result.rows[0].id]
         );
         res.status(201).json({ success: true, song: result.rows[0] });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'La canción no es válida.' });
+        return;
+    }
+    const {
+        title, author = '', artist = '', hasSequence = false,
+        lyrics = '', chordsUrl = '', sheetUrl = ''
+    } = req.body || {};
+    if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
+        || typeof author !== 'string' || author.length > 160
+        || typeof artist !== 'string' || artist.length > 160
+        || typeof hasSequence !== 'boolean'
+        || typeof lyrics !== 'string' || lyrics.length > 12000
+        || (chordsUrl && !validHttpUrl(chordsUrl)) || (sheetUrl && !validHttpUrl(sheetUrl))) {
+        res.status(400).json({ success: false, message: 'Revisa los datos y enlaces de la canción.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            `UPDATE songs
+             SET title = $1, author = $2, artist = $3, has_sequence = $4,
+                 lyrics = $5, chords_url = $6, sheet_url = $7
+             WHERE id = $8
+             RETURNING id, title, author, has_sequence, lyrics, chords_url, sheet_url`,
+            [
+                title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
+                lyrics.trim(), chordsUrl || null, sheetUrl || null, req.params.id
+            ]
+        );
+        if (!result.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró esa canción.' });
+            return;
+        }
+        await pool.query(
+            `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
+             VALUES ($1, 'song.updated', 'song', $2)`,
+            [req.auth.sub, req.params.id]
+        );
+        res.json({ success: true, song: result.rows[0] });
     } catch (error) {
         next(error);
     }

@@ -285,6 +285,10 @@
         .management-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
         .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
         .password-form { margin-top:16px; }
+        .profile-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px; }
+        .profile-actions .action-button { width:100%; }
+        .profile-notification-control { display:grid; gap:7px; }
+        .profile-notification-control .status { margin:0; }
         .form-field { display:grid; gap:5px; color:var(--muted); font-size:13px; }
         .form-field input, .form-field select, .form-field textarea {
             width:100%; min-height:40px; padding:9px 11px; border:1px solid #d8deea;
@@ -364,6 +368,8 @@
         .song-table tbody tr:nth-child(even) { background:#f8faff; }
         .song-table th { color:var(--navy); font-size:13px; }
         .song-table td { color:var(--muted); font-size:13px; }
+        .song-title-button { padding:0; border:0; background:none; color:var(--navy); font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+        .song-title-button:hover { color:var(--blue); text-decoration:underline; }
         .song-pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:13px; }
         .song-pagination button { min-height:36px; padding:0 13px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--navy); font:inherit; font-weight:700; cursor:pointer; }
         .song-pagination button:disabled { opacity:.45; cursor:not-allowed; }
@@ -392,6 +398,12 @@
         .pending-dialog .feed-card { padding:15px 16px; border-radius:14px; box-shadow:0 4px 14px rgba(32,54,111,.05); }
         .pending-dialog form { display:flex; justify-content:flex-end; padding-top:15px; border-top:1px solid var(--line); }
         .pending-dialog .action-button { min-width:105px; }
+        .song-detail-dialog { width:min(92vw,680px); max-height:min(84vh,760px); overflow:auto; border:1px solid var(--line); border-radius:18px; padding:24px; color:var(--ink); box-shadow:0 28px 90px rgba(0,14,41,.32); }
+        .song-detail-dialog::backdrop { background:rgba(0,10,30,.62); backdrop-filter:blur(5px); }
+        .song-detail-dialog h2 { margin:0 0 5px; color:var(--navy); }
+        .song-detail-dialog .song-detail-content { display:grid; gap:12px; margin-top:18px; }
+        .song-detail-dialog .song-lyrics-content { margin:0; padding:13px; border:1px solid var(--line); border-radius:11px; background:#f8faff; white-space:pre-wrap; color:var(--muted); }
+        .song-detail-dialog form { display:flex; justify-content:flex-end; margin-top:18px; }
         .directory-list[hidden] { display:none !important; }
         [hidden] { display:none !important; }
 
@@ -472,6 +484,7 @@
             .announcement-icon { width:48px; height:48px; font-size:24px; }
             .content-grid { grid-template-columns:1fr; }
             .management-grid, .form-grid { grid-template-columns:1fr; }
+            .profile-actions { grid-template-columns:1fr; }
             .form-field.full { grid-column:auto; }
             .user-row { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"identity save" "roles roles" "credentials credentials"; }
             .user-row > .role-options { grid-column:1 / -1; }
@@ -793,11 +806,13 @@
                 <label class="form-field">Nueva contraseña
                     <input name="newPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
                 </label>
-                <button class="action-button" type="submit">Cambiar contraseña</button>
             </form>
-            <div class="form-grid">
-                <p class="full" id="pushStatus">Comprobando notificaciones…</p>
-                <button class="action-button" id="pushToggle" type="button">Activar notificaciones</button>
+            <div class="profile-actions">
+                <button class="action-button" form="passwordForm" type="submit">Cambiar contraseña</button>
+                <div class="profile-notification-control">
+                    <button class="action-button" id="pushToggle" type="button">Activar notificaciones</button>
+                    <p class="status" id="pushStatus">Comprobando notificaciones…</p>
+                </div>
             </div>
             <p class="status" id="profileStatus" role="status" aria-live="polite"></p>
         </section>
@@ -842,6 +857,7 @@
             <h2>Repertorio y ensayos</h2>
             <p>Consulta letras, acordes y partituras. Las fechas de ensayos están en Eventos y cultos.</p>
             <form class="form-grid" id="songForm" hidden>
+                <input name="songId" type="hidden">
                 <label class="form-field">Canción
                     <input name="title" maxlength="160" required>
                 </label>
@@ -861,6 +877,7 @@
                     <input name="sheetUrl" type="url" maxlength="1000">
                 </label>
                 <button class="action-button" type="submit">Agregar canción</button>
+                <button class="action-button" id="cancelSongEdit" type="button" hidden>Cancelar edición</button>
             </form>
             <p class="status" id="songStatus" role="status" aria-live="polite"></p>
             <input class="song-search" id="songSearch" type="search" placeholder="Buscar por canción o autor…" aria-label="Buscar canciones por título o autor">
@@ -1008,6 +1025,12 @@
                 <div class="feed-list" id="pendingPrayerDialogList"></div>
                 <form method="dialog"><button class="action-button" type="submit">Cerrar ventana</button></form>
             </div>
+        </dialog>
+        <dialog class="song-detail-dialog" id="songDetailDialog" aria-labelledby="songDetailTitle">
+            <h2 id="songDetailTitle"></h2>
+            <p class="feed-meta" id="songDetailMeta"></p>
+            <div class="song-detail-content" id="songDetailContent"></div>
+            <form method="dialog"><button class="action-button" type="submit">Cerrar</button></form>
         </dialog>
 
         <section class="panel role-access" id="masterPanel" data-view-section="admin" hidden>
@@ -1460,7 +1483,7 @@
                     content.appendChild(detailsSection);
                 }
 
-                if (service.songs?.length) {
+                if (canSeeTeam && service.songs?.length) {
                     const songsSection = document.createElement('section');
                     songsSection.className = 'service-expanded-section';
                     addTextElement(songsSection, 'h4', '', 'Cantos programados');
@@ -1985,12 +2008,9 @@
             filteredSongs.slice(startIndex, startIndex + songsPerPage).forEach((song) => {
                 const row = document.createElement('tr');
                 const title = document.createElement('td');
-                addTextElement(title, 'strong', '', song.title);
-                if (song.lyrics) {
-                    const lyrics = addTextElement(title, 'details', 'song-lyrics', '');
-                    addTextElement(lyrics, 'summary', '', 'Ver letra');
-                    addTextElement(lyrics, 'p', '', song.lyrics);
-                }
+                const titleButton = addTextElement(title, 'button', 'song-title-button', song.title);
+                titleButton.type = 'button';
+                titleButton.addEventListener('click', () => showSongDetails(song));
                 row.appendChild(title);
                 addTextElement(row, 'td', '', song.author || '—');
                 addTextElement(row, 'td', '', song.has_sequence ? 'Sí' : 'No');
@@ -2007,6 +2027,9 @@
                 addExternalLink(links, 'Partitura', song.sheet_url);
                 resourceCell.appendChild(links);
                 if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) {
+                    const edit = addTextElement(resourceCell, 'button', 'action-button', 'Editar');
+                    edit.type = 'button';
+                    edit.addEventListener('click', () => startSongEdit(song));
                     const remove = addTextElement(resourceCell, 'button', 'remove-assignment', 'Eliminar');
                     remove.type = 'button';
                     remove.addEventListener('click', async () => {
@@ -2017,6 +2040,37 @@
                             document.getElementById('songStatus').textContent = error.message;
                         }
                     });
+                }
+
+                function showSongDetails(song) {
+                    document.getElementById('songDetailTitle').textContent = song.title;
+                    document.getElementById('songDetailMeta').textContent =
+                        `${song.author || 'Autor no registrado'} · Secuencia: ${song.has_sequence ? 'Sí' : 'No'} · ` +
+                        `Última vez tocado: ${song.last_played_at ? formatServiceDate(song.last_played_at) : 'Sin registro'}`;
+                    const content = document.getElementById('songDetailContent');
+                    content.replaceChildren();
+                    const lyrics = addTextElement(content, 'p', 'song-lyrics-content', song.lyrics || 'No hay letra agregada.');
+                    lyrics.setAttribute('aria-label', 'Letra de la canción');
+                    const links = document.createElement('div');
+                    links.className = 'inline-actions';
+                    addExternalLink(links, 'Abrir acordes', song.chords_url);
+                    addExternalLink(links, 'Abrir partitura', song.sheet_url);
+                    if (links.childElementCount) content.appendChild(links);
+                    document.getElementById('songDetailDialog').showModal();
+                }
+
+                function startSongEdit(song) {
+                    const form = document.getElementById('songForm');
+                    form.elements.songId.value = song.id;
+                    form.elements.title.value = song.title || '';
+                    form.elements.author.value = song.author || '';
+                    form.elements.hasSequence.checked = Boolean(song.has_sequence);
+                    form.elements.lyrics.value = song.lyrics || '';
+                    form.elements.chordsUrl.value = song.chords_url || '';
+                    form.elements.sheetUrl.value = song.sheet_url || '';
+                    form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
+                    document.getElementById('cancelSongEdit').hidden = false;
+                    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 row.appendChild(resourceCell);
                 list.appendChild(row);
@@ -2107,6 +2161,13 @@
             renderSongTable();
         });
         document.getElementById('serviceSongSearch').addEventListener('input', renderServiceSongPicker);
+        document.getElementById('cancelSongEdit').addEventListener('click', () => {
+            const form = document.getElementById('songForm');
+            form.reset();
+            form.elements.songId.value = '';
+            form.querySelector('button[type="submit"]').textContent = 'Agregar canción';
+            document.getElementById('cancelSongEdit').hidden = true;
+        });
 
         async function loadResources() {
             const { resources } = await MiIglesia.request('/api/resources');
@@ -2472,10 +2533,13 @@
             const form = event.currentTarget;
             const data = new FormData(form);
             const button = form.querySelector('button[type="submit"]');
+            const songId = String(data.get('songId') || '');
             button.disabled = true;
             try {
-                await MiIglesia.request('/api/songs', {
-                    method: 'POST',
+                await MiIglesia.request(
+                    songId ? `/api/songs/${encodeURIComponent(songId)}` : '/api/songs',
+                    {
+                    method: songId ? 'PATCH' : 'POST',
                     body: JSON.stringify({
                         title: data.get('title'),
                         author: data.get('author'),
@@ -2484,9 +2548,14 @@
                         chordsUrl: data.get('chordsUrl'),
                         sheetUrl: data.get('sheetUrl')
                     })
-                });
+                    }
+                );
                 form.reset();
-                document.getElementById('songStatus').textContent = 'Canción agregada al repertorio.';
+                form.elements.songId.value = '';
+                button.textContent = 'Agregar canción';
+                document.getElementById('cancelSongEdit').hidden = true;
+                document.getElementById('songStatus').textContent =
+                    songId ? 'Canción actualizada.' : 'Canción agregada al repertorio.';
                 await loadSongs();
             } catch (error) {
                 document.getElementById('songStatus').textContent = error.message;
@@ -2721,7 +2790,6 @@
 
         let shownNotificationIds = [];
         async function checkNotifications() {
-            if (shownNotificationIds.length) return;
             try {
                 const { notifications } = await MiIglesia.request('/api/notifications');
                 if (!notifications.length) return;
@@ -2735,8 +2803,8 @@
                     list.appendChild(entry);
                 });
                 document.getElementById('notificationBanner').hidden = false;
-            } catch {
-                // Se reintenta en la siguiente comprobación.
+            } catch (error) {
+                console.error('No se pudieron cargar las notificaciones:', error);
             }
         }
 
@@ -2749,18 +2817,58 @@
                     body: JSON.stringify({ ids })
                 });
                 shownNotificationIds = [];
-            } catch {
+            } catch (error) {
+                console.error('No se pudieron marcar las notificaciones como leídas:', error);
                 document.getElementById('notificationBanner').hidden = false;
             }
         });
 
-        setInterval(checkNotifications, 30000);
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) checkNotifications();
-        });
-        checkNotifications();
+        let lastDataRefreshAt = 0;
+        let dataRefreshInProgress = false;
+        async function refreshPageData() {
+            if (dataRefreshInProgress || !MiIglesia.hasToken()) return;
+            dataRefreshInProgress = true;
+            try {
+                await MiIglesia.request('/api/auth/me');
+                const requests = [
+                    loadServices(),
+                    loadAnnouncements(),
+                    loadPrayers()
+                ];
+                if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) requests.push(loadSongs());
+                if (currentUserAreas.some((area) => [2, 3, 5].includes(area))) requests.push(loadResources());
+                if (currentUserAreas.some((area) => [2, 4, 5].includes(area))) {
+                    requests.push(loadMonitorNotes(), loadSoundFiles());
+                }
+                if (canManageServices) requests.push(loadDirectory());
+                await Promise.allSettled(requests);
+                lastDataRefreshAt = Date.now();
+                await checkNotifications();
+            } catch (error) {
+                if (error.status === 401) {
+                    MiIglesia.clearToken();
+                    window.location.replace('index.html');
+                }
+            } finally {
+                dataRefreshInProgress = false;
+            }
+        }
 
-        loadPage();
+        setInterval(() => {
+            if (!document.hidden && Date.now() - lastDataRefreshAt >= 120000) refreshPageData();
+        }, 30000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                checkNotifications();
+                if (Date.now() - lastDataRefreshAt >= 120000) refreshPageData();
+            }
+        });
+        window.addEventListener('pageshow', () => {
+            if (Date.now() - lastDataRefreshAt >= 120000) refreshPageData();
+        });
+        window.addEventListener('online', refreshPageData);
+        checkNotifications();
+        loadPage().then(() => { lastDataRefreshAt = Date.now(); });
     </script>
     <script src="pwa.js"></script>
 </body>
