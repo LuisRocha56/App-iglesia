@@ -39,6 +39,8 @@ Las imágenes de anuncios y de eventos se guardan en PostgreSQL. Los anuncios re
 
 Multimedia y Sonido usan Google Drive cuando `GOOGLE_SERVICE_ACCOUNT_JSON` está configurada; si no lo está, la carga se guarda en PostgreSQL como alternativa para que no quede bloqueada. Los archivos tienen un límite de 10 MB y se borran de su almacenamiento al eliminarlos desde la app. Para habilitar Drive, configura `GOOGLE_SERVICE_ACCOUNT_JSON` como secreto de entorno en Render con el JSON de una cuenta de servicio. Comparte ambas carpetas de Drive con el correo de esa cuenta y dale permiso de editor. Carpetas: Multimedia `1RNFmBpMc4SUgvNJnIAZeMdRhZxtGD2kh`; Sonido `1JdDAz1TJxXGaAo7z5adcjabBbOZVjqyP`. Nunca agregues las credenciales de la cuenta de servicio al repositorio. Los registros de auditoría de Administración se muestran paginados, diez por página.
 
+El repertorio permite guardar la letra y, de forma opcional, los acordes como texto con saltos de línea para conservar formatos de dos renglones. Multimedia puede agregar y actualizar letras; los roles de Músico, Coordinación y Master también pueden completar los acordes. La sección de actividad reciente muestra las canciones nuevas y las actualizadas.
+
 Cada persona puede actualizar sus propios datos y cambiar su contraseña confirmando la contraseña actual. La API no entrega contraseñas ni secretos técnicos.
 
 Al abrir `index.html`, si el navegador conserva un token de sesión válido, la página lo comprueba con el API y abre `Inicio.html` automáticamente. Si el token venció, se elimina y se solicita iniciar sesión otra vez. Si el API no responde, el token se conserva. Las sesiones actuales duran 8 horas; borrar los datos del navegador también cierra la sesión.

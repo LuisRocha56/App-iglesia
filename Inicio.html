@@ -295,6 +295,7 @@
             border-radius:9px; background:#fff; color:var(--ink); font:inherit;
         }
         .form-field textarea { min-height:76px; resize:vertical; }
+        .form-help { color:var(--muted); font-size:11px; line-height:1.45; }
         .form-field.full { grid-column:1 / -1; }
         .action-button {
             min-height:40px; padding:0 14px; border:0; border-radius:9px;
@@ -361,6 +362,14 @@
         .directory-search { width:100%; min-height:40px; margin:10px 0; padding:9px 11px; border:1px solid #d8deea; border-radius:9px; font:inherit; }
         .song-search { width:100%; min-height:44px; margin:14px 0 8px; padding:10px 13px; border:1px solid #d8deea; border-radius:11px; background:#fff; color:var(--ink); font:inherit; }
         .song-results-meta { margin:0 0 6px !important; color:var(--muted); font-size:12px; }
+        .song-activity { display:grid; gap:9px; margin:18px 0 14px; padding:15px; border:1px solid rgba(106,142,174,.2); border-radius:15px; background:linear-gradient(135deg,#f2f8ff,#fff); }
+        .song-activity h3 { margin:0; color:var(--navy); font-size:16px; }
+        .song-activity-list { display:grid; gap:7px; }
+        .song-activity-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+        .song-activity-name { min-width:0; color:var(--ink); font-size:13px; font-weight:700; overflow-wrap:anywhere; }
+        .song-activity-meta { flex:0 0 auto; color:var(--muted); font-size:11px; text-align:right; }
+        .song-activity-badge { display:inline-block; margin-right:6px; padding:3px 7px; border-radius:999px; background:#e5f5ec; color:#197044; font-size:10px; font-weight:800; text-transform:uppercase; }
+        .song-activity-badge.updated { background:#e8f1ff; color:#2860a8; }
         .song-table-wrap { overflow-x:auto; margin-top:12px; border:1px solid var(--line); border-radius:13px; background:#fff; }
         .song-table { width:100%; border-collapse:collapse; text-align:left; }
         .song-table th, .song-table td { padding:12px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
@@ -870,6 +879,12 @@
                 <label class="form-field full">Letra
                     <textarea name="lyrics" maxlength="12000"></textarea>
                 </label>
+                <label class="form-field full" id="songChordsField">Acordes opcionales
+                    <textarea name="chords" maxlength="12000" placeholder="Ejemplo:
+G             D
+Una vez más"></textarea>
+                    <span class="form-help">Puedes escribir los acordes respetando los espacios y saltos de línea. No es obligatorio agregarlos.</span>
+                </label>
                 <label class="form-field">Enlace de acordes
                     <input name="chordsUrl" type="url" maxlength="1000">
                 </label>
@@ -882,6 +897,10 @@
             <p class="status" id="songStatus" role="status" aria-live="polite"></p>
             <input class="song-search" id="songSearch" type="search" placeholder="Buscar por canción o autor…" aria-label="Buscar canciones por título o autor">
             <p class="song-results-meta" id="songResultsMeta" aria-live="polite"></p>
+            <section class="song-activity" id="songActivity" aria-labelledby="songActivityTitle">
+                <h3 id="songActivityTitle">Actualizaciones recientes</h3>
+                <div class="song-activity-list" id="songActivityList"></div>
+            </section>
             <div class="song-table-wrap">
                 <table class="song-table">
                     <thead><tr><th>Canto</th><th>Autor</th><th>Secuencia</th><th>Última vez tocado</th><th>Recursos</th></tr></thead>
@@ -2026,7 +2045,7 @@
                 addExternalLink(links, 'Acordes', song.chords_url);
                 addExternalLink(links, 'Partitura', song.sheet_url);
                 resourceCell.appendChild(links);
-                if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) {
+                if (currentUserAreas.some((area) => [1, 2, 3, 5].includes(area))) {
                     const edit = addTextElement(resourceCell, 'button', 'action-button', 'Editar');
                     edit.type = 'button';
                     edit.addEventListener('click', () => startSongEdit(song));
@@ -2042,6 +2061,35 @@
                     });
                 }
 
+                function renderSongActivity() {
+                    const list = document.getElementById('songActivityList');
+                    list.replaceChildren();
+                    const recentSongs = [...currentSongs]
+                        .filter((song) => song.updated_at || song.created_at)
+                        .sort((left, right) =>
+                            new Date(right.updated_at || right.created_at) - new Date(left.updated_at || left.created_at)
+                        )
+                        .slice(0, 5);
+                    recentSongs.forEach((song) => {
+                        const item = document.createElement('div');
+                        item.className = 'song-activity-item';
+                        const name = addTextElement(item, 'span', 'song-activity-name', song.title);
+                        name.title = 'Abrir detalles de la canción';
+                        name.addEventListener('click', () => showSongDetails(song));
+                        name.style.cursor = 'pointer';
+                        const meta = document.createElement('span');
+                        meta.className = 'song-activity-meta';
+                        const isNew = song.created_at && song.updated_at
+                            && new Date(song.created_at).getTime() === new Date(song.updated_at).getTime();
+                        const badge = addTextElement(meta, 'span', `song-activity-badge${isNew ? '' : ' updated'}`, isNew ? 'Nueva' : 'Actualizada');
+                        badge.setAttribute('aria-label', isNew ? 'Canción nueva' : 'Canción actualizada');
+                        meta.append(document.createTextNode(formatServiceDate(song.updated_at || song.created_at)));
+                        item.appendChild(meta);
+                        list.appendChild(item);
+                    });
+                    document.getElementById('songActivity').hidden = !recentSongs.length;
+                }
+
                 function showSongDetails(song) {
                     document.getElementById('songDetailTitle').textContent = song.title;
                     document.getElementById('songDetailMeta').textContent =
@@ -2049,8 +2097,27 @@
                         `Última vez tocado: ${song.last_played_at ? formatServiceDate(song.last_played_at) : 'Sin registro'}`;
                     const content = document.getElementById('songDetailContent');
                     content.replaceChildren();
-                    const lyrics = addTextElement(content, 'p', 'song-lyrics-content', song.lyrics || 'No hay letra agregada.');
+                    const lyricsSection = document.createElement('section');
+                    addTextElement(lyricsSection, 'strong', '', 'Letra');
+                    const lyrics = addTextElement(
+                        lyricsSection,
+                        'p',
+                        'song-lyrics-content',
+                        song.lyrics || 'No hay letra agregada.'
+                    );
                     lyrics.setAttribute('aria-label', 'Letra de la canción');
+                    content.appendChild(lyricsSection);
+                    const chordsSection = document.createElement('section');
+                    addTextElement(chordsSection, 'strong', '', 'Acordes');
+                    const chords = addTextElement(
+                        chordsSection,
+                        'p',
+                        'song-lyrics-content',
+                        song.chords || 'No hay acordes agregados.'
+                    );
+                    chords.setAttribute('aria-label', 'Acordes de la canción');
+                    chordsSection.appendChild(chords);
+                    content.appendChild(chordsSection);
                     const links = document.createElement('div');
                     links.className = 'inline-actions';
                     addExternalLink(links, 'Abrir acordes', song.chords_url);
@@ -2066,6 +2133,7 @@
                     form.elements.author.value = song.author || '';
                     form.elements.hasSequence.checked = Boolean(song.has_sequence);
                     form.elements.lyrics.value = song.lyrics || '';
+                    form.elements.chords.value = song.chords || '';
                     form.elements.chordsUrl.value = song.chords_url || '';
                     form.elements.sheetUrl.value = song.sheet_url || '';
                     form.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
@@ -2153,6 +2221,7 @@
                 if (!availableIds.has(id)) selectedServiceSongIds.delete(id);
             });
             renderSongTable();
+            renderSongActivity();
             renderServiceSongPicker();
         }
 
@@ -2545,6 +2614,7 @@
                         author: data.get('author'),
                         hasSequence: data.get('hasSequence') === 'true',
                         lyrics: data.get('lyrics'),
+                        chords: data.get('chords'),
                         chordsUrl: data.get('chordsUrl'),
                         sheetUrl: data.get('sheetUrl')
                     })
@@ -2733,7 +2803,7 @@
                 prayers: true,
                 profile: true,
                 coordination: canManageServices,
-                songs: areas.some((area) => [1, 2, 5].includes(area)),
+                songs: areas.some((area) => [1, 2, 3, 5].includes(area)),
                 media: areas.some((area) => [2, 3, 5].includes(area)),
                 sound: areas.some((area) => [2, 4, 5].includes(area)),
                 admin: isMaster
@@ -2744,7 +2814,10 @@
             document.getElementById('musicianPanel').hidden = !menuViews.songs;
             document.getElementById('multimediaPanel').hidden = !menuViews.media;
             document.getElementById('soundPanel').hidden = !menuViews.sound;
-            document.getElementById('songForm').hidden = !areas.some((area) => [1, 2, 5].includes(area));
+            const canAccessSongs = areas.some((area) => [1, 2, 3, 5].includes(area));
+            const canManageChords = areas.some((area) => [1, 2, 5].includes(area));
+            document.getElementById('songForm').hidden = !canAccessSongs;
+            document.getElementById('songChordsField').hidden = !canManageChords;
             document.getElementById('resourceForm').hidden = !areas.some((area) => [2, 3, 5].includes(area));
             document.getElementById('monitorForm').hidden = !areas.some((area) => [2, 4, 5].includes(area));
             document.getElementById('serviceManagement').hidden = !canManageServices;
@@ -2761,7 +2834,7 @@
                 [loadAnnouncements(), 'announcementStatus'],
                 [loadPrayers(), 'prayerStatus']
             ];
-            if (areas.some((area) => [1, 2, 5].includes(area))) requests.push([loadSongs(), 'songStatus']);
+            if (canAccessSongs) requests.push([loadSongs(), 'songStatus']);
             if (areas.some((area) => [2, 3, 5].includes(area))) requests.push([loadResources(), 'resourceStatus']);
             if (areas.some((area) => [2, 4, 5].includes(area))) requests.push([loadMonitorNotes(), 'soundStatus']);
             if (areas.some((area) => [2, 4, 5].includes(area))) requests.push([loadSoundFiles(), 'soundFileStatus']);
@@ -2835,7 +2908,7 @@
                     loadAnnouncements(),
                     loadPrayers()
                 ];
-                if (currentUserAreas.some((area) => [1, 2, 5].includes(area))) requests.push(loadSongs());
+                if (currentUserAreas.some((area) => [1, 2, 3, 5].includes(area))) requests.push(loadSongs());
                 if (currentUserAreas.some((area) => [2, 3, 5].includes(area))) requests.push(loadResources());
                 if (currentUserAreas.some((area) => [2, 4, 5].includes(area))) {
                     requests.push(loadMonitorNotes(), loadSoundFiles());

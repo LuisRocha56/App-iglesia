@@ -1617,12 +1617,13 @@ app.delete('/api/prayers/:id/support', getAuthenticatedUser, async (req, res, ne
     }
 });
 
-app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (_req, res, next) => {
+app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
             `SELECT s.id, s.title,
                     COALESCE(NULLIF(s.author, ''), s.artist) AS author,
-                    s.has_sequence, s.lyrics, s.chords_url, s.sheet_url,
+                    s.has_sequence, s.lyrics, s.chords, s.chords_url, s.sheet_url,
+                    s.created_at, s.updated_at,
                     MAX(e.starts_at) FILTER (WHERE e.starts_at <= NOW()) AS last_played_at
              FROM songs s
              LEFT JOIN service_songs ss ON ss.song_id = s.id
@@ -1637,28 +1638,29 @@ app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (_req
     }
 });
 
-app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req, res, next) => {
+app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
     const {
         title, author = '', artist = '', hasSequence = false,
-        lyrics = '', chordsUrl = '', sheetUrl = ''
+        lyrics = '', chords = '', chordsUrl = '', sheetUrl = ''
     } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
         || typeof author !== 'string' || author.length > 160
         || typeof artist !== 'string' || artist.length > 160
         || typeof hasSequence !== 'boolean'
         || typeof lyrics !== 'string' || lyrics.length > 12000
+        || typeof chords !== 'string' || chords.length > 12000
         || (chordsUrl && !validHttpUrl(chordsUrl)) || (sheetUrl && !validHttpUrl(sheetUrl))) {
         res.status(400).json({ success: false, message: 'Revisa los datos y enlaces de la canción.' });
         return;
     }
     try {
         const result = await pool.query(
-            `INSERT INTO songs (title, author, artist, has_sequence, lyrics, chords_url, sheet_url, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING id, title, author, has_sequence, lyrics, chords_url, sheet_url`,
+            `INSERT INTO songs (title, author, artist, has_sequence, lyrics, chords, chords_url, sheet_url, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING id, title, author, has_sequence, lyrics, chords, chords_url, sheet_url, created_at, updated_at`,
             [
                 title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
-                lyrics.trim(), chordsUrl || null, sheetUrl || null, req.auth.sub
+                lyrics.trim(), chords.trim(), chordsUrl || null, sheetUrl || null, req.auth.sub
             ]
         );
         await pool.query(
@@ -1672,20 +1674,21 @@ app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req
     }
 });
 
-app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req, res, next) => {
+app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
     if (!/^[1-9]\d*$/.test(req.params.id)) {
         res.status(400).json({ success: false, message: 'La canción no es válida.' });
         return;
     }
     const {
         title, author = '', artist = '', hasSequence = false,
-        lyrics = '', chordsUrl = '', sheetUrl = ''
+        lyrics = '', chords = '', chordsUrl = '', sheetUrl = ''
     } = req.body || {};
     if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
         || typeof author !== 'string' || author.length > 160
         || typeof artist !== 'string' || artist.length > 160
         || typeof hasSequence !== 'boolean'
         || typeof lyrics !== 'string' || lyrics.length > 12000
+        || typeof chords !== 'string' || chords.length > 12000
         || (chordsUrl && !validHttpUrl(chordsUrl)) || (sheetUrl && !validHttpUrl(sheetUrl))) {
         res.status(400).json({ success: false, message: 'Revisa los datos y enlaces de la canción.' });
         return;
@@ -1694,12 +1697,12 @@ app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), async
         const result = await pool.query(
             `UPDATE songs
              SET title = $1, author = $2, artist = $3, has_sequence = $4,
-                 lyrics = $5, chords_url = $6, sheet_url = $7
-             WHERE id = $8
-             RETURNING id, title, author, has_sequence, lyrics, chords_url, sheet_url`,
+                 lyrics = $5, chords = $6, chords_url = $7, sheet_url = $8, updated_at = NOW()
+             WHERE id = $9
+             RETURNING id, title, author, has_sequence, lyrics, chords, chords_url, sheet_url, created_at, updated_at`,
             [
                 title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
-                lyrics.trim(), chordsUrl || null, sheetUrl || null, req.params.id
+                lyrics.trim(), chords.trim(), chordsUrl || null, sheetUrl || null, req.params.id
             ]
         );
         if (!result.rowCount) {
@@ -1717,7 +1720,7 @@ app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), async
     }
 });
 
-app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 5]), async (req, res, next) => {
+app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
     if (!/^[1-9]\d*$/.test(req.params.id)) {
         res.status(400).json({ success: false, message: 'La canción no es válida.' });
         return;
@@ -2349,17 +2352,21 @@ async function startServer() {
             author VARCHAR(160) NOT NULL DEFAULT '',
             has_sequence BOOLEAN NOT NULL DEFAULT FALSE,
             lyrics TEXT NOT NULL DEFAULT '',
+            chords TEXT NOT NULL DEFAULT '',
             chords_url TEXT,
             sheet_url TEXT,
             created_by BIGINT REFERENCES users(id),
             catalog_key VARCHAR(64),
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
     await pool.query(`
         ALTER TABLE songs
         ADD COLUMN IF NOT EXISTS author VARCHAR(160) NOT NULL DEFAULT '',
         ADD COLUMN IF NOT EXISTS has_sequence BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS chords TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         ADD COLUMN IF NOT EXISTS catalog_key VARCHAR(64)
     `);
     await pool.query(`
