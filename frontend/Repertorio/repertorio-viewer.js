@@ -5,6 +5,10 @@
     root.setAttribute('aria-label', 'Lector de canción');
     document.body.appendChild(root);
 
+    root.addEventListener('click', (event) => {
+        if (!event.target.closest('[data-chord-key], .song-chord-popup')) hideChordPopup();
+    });
+    root.addEventListener('scroll', () => hideChordPopup(), true);
     let song = null;
     let transpose = 0;
     let capo = 0;
@@ -192,10 +196,15 @@
         return Array.from({ length: count }, (_, index) => {
             const lyric = lyrics[index] || '';
             const chord = chords[index] || '';
-            // Acordes escritos como texto dentro de la letra
-            if (!chord.trim() && isChordLine(lyric)) return { lyric: '', chord: lyric, chordOnly: true };
-            return { lyric, chord };
-        });
+            // Acordes escritos como texto dentro de la letra, aunque la columna de acordes tenga contenido
+            if (isChordLine(lyric)) {
+                const rows = [];
+                if (chord.trim()) rows.push({ lyric: '', chord, chordOnly: true });
+                rows.push({ lyric: '', chord: lyric, chordOnly: true });
+                return rows;
+            }
+            return [{ lyric, chord }];
+        }).flat();
     }
 
     function originalKey() {
@@ -367,23 +376,69 @@
             </button>`;
     }
 
-    function chordPopupMarkup() {
-        const info = activeChordKey && currentChords.find((chord) => chord.shapeLabel === activeChordKey);
-        if (!info) return '';
+    function chordPopupMarkup(info) {
         const differs = effectiveCapo() % 12 && info.soundLabel !== info.shapeLabel;
         const subtitle = differs
             ? `<b>${escapeText(info.soundLabel)}</b> con forma de <b>${escapeText(info.shapeLabel)}</b>`
             : `<b>${escapeText(info.shapeLabel)}</b>`;
         return `
-            <div class="song-chord-popup-layer" data-action="chord-close">
-                <div class="song-chord-popup" role="dialog" aria-label="Acorde ${escapeAttr(info.shapeLabel)}">
-                    <span class="song-chord-popup-handle"></span>
-                    <h4>${escapeText(chordDisplayName(info))}</h4>
-                    ${diagramSvg(info)}
-                    <p>${subtitle}</p>
-                    <button type="button" class="song-chord-popup-change" data-action="chord-change">Cambiar</button>
-                </div>
-            </div>`;
+            <span class="song-chord-popup-handle"></span>
+            <h4>${escapeText(chordDisplayName(info))}</h4>
+            ${diagramSvg(info)}
+            <p>${subtitle}</p>
+            <button type="button" class="song-chord-popup-change" data-action="chord-change">Cambiar</button>`;
+    }
+
+    let popupEl = null;
+    let popupPinned = false;
+    let anchorIndex = -1;
+    let hideTimer = null;
+
+    function hideChordPopup() {
+        clearTimeout(hideTimer);
+        activeChordKey = null;
+        popupPinned = false;
+        if (popupEl) popupEl.remove();
+        popupEl = null;
+    }
+
+    function scheduleHide() {
+        clearTimeout(hideTimer);
+        if (!popupPinned) hideTimer = setTimeout(hideChordPopup, 220);
+    }
+
+    // La ventana se despliega hacia arriba del acorde (o hacia abajo si no hay espacio)
+    function showChordPopup(anchor) {
+        const info = currentChords.find((chord) => chord.shapeLabel === anchor.dataset.chordKey);
+        if (!info) return;
+        clearTimeout(hideTimer);
+        activeChordKey = info.shapeLabel;
+        anchorIndex = [...root.querySelectorAll('[data-chord-key]')].indexOf(anchor);
+        if (popupEl) popupEl.remove();
+        popupEl = document.createElement('div');
+        popupEl.className = 'song-chord-popup';
+        popupEl.setAttribute('role', 'dialog');
+        popupEl.innerHTML = chordPopupMarkup(info);
+        popupEl.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        popupEl.addEventListener('mouseleave', scheduleHide);
+        popupEl.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (event.target.closest('[data-action="chord-change"]')) {
+                voicingChoice[voicingKey(info)] = (voicingChoice[voicingKey(info)] || 0) + 1;
+                popupEl.innerHTML = chordPopupMarkup(info);
+                const card = [...root.querySelectorAll('.song-chord-diagram')].find((el) => el.dataset.chordKey === info.shapeLabel);
+                if (card) card.innerHTML = `<strong>${escapeText(chordDisplayName(info))}</strong>${diagramSvg(info)}`;
+            }
+        });
+        root.appendChild(popupEl);
+
+        const rect = anchor.getBoundingClientRect();
+        const width = popupEl.offsetWidth;
+        const height = popupEl.offsetHeight;
+        const left = Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 8);
+        const top = rect.top - height - 8 >= 8 ? rect.top - height - 8 : rect.bottom + 8;
+        popupEl.style.left = `${left}px`;
+        popupEl.style.top = `${top}px`;
     }
 
     function uniqueChords() {
@@ -565,8 +620,8 @@
                     </article>
                 </div>
             </main>
-            ${chordPopupMarkup()}
         `;
+        popupEl = null;
 
         if (previous.main !== undefined) root.querySelector('.song-reader-main').scrollTop = previous.main;
         const strip = root.querySelector('#songDiagrams');
@@ -588,12 +643,21 @@
         });
 
         root.querySelectorAll('[data-chord-key]').forEach((element) => {
-            element.addEventListener('click', () => {
-                activeChordKey = element.dataset.chordKey;
-                render();
+            element.addEventListener('mouseenter', () => {
+                if (!popupPinned) showChordPopup(element);
+            });
+            element.addEventListener('mouseleave', scheduleHide);
+            element.addEventListener('click', (event) => {
+                event.stopPropagation();
+                popupPinned = true;
+                showChordPopup(element);
             });
         });
-        root.querySelector('.song-chord-popup')?.addEventListener('click', (event) => event.stopPropagation());
+        if (activeChordKey) {
+            const anchor = root.querySelectorAll('[data-chord-key]')[anchorIndex];
+            if (anchor) showChordPopup(anchor);
+            else hideChordPopup();
+        }
 
         const searchInput = root.querySelector('#songReaderSearch');
         const searchResults = root.querySelector('#songReaderSearchResults');
@@ -863,15 +927,6 @@
             render();
         } else if (action === 'diagrams-prev' || action === 'diagrams-next') {
             root.querySelector('#songDiagrams')?.scrollBy({ left: action === 'diagrams-next' ? 320 : -320, behavior: 'smooth' });
-        } else if (action === 'chord-close') {
-            activeChordKey = null;
-            render();
-        } else if (action === 'chord-change') {
-            const info = currentChords.find((chord) => chord.shapeLabel === activeChordKey);
-            if (info) {
-                voicingChoice[voicingKey(info)] = (voicingChoice[voicingKey(info)] || 0) + 1;
-                render();
-            }
         } else if (action === 'print') {
             printSong();
         } else if (action === 'download-pdf') {
@@ -889,6 +944,7 @@
     }
 
     window.openSongViewer = (selectedSong, { keepMenu = false } = {}) => {
+        hideChordPopup();
         song = selectedSong;
         transpose = 0;
         capo = 0;

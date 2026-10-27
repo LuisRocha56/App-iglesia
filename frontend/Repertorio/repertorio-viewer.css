@@ -405,16 +405,9 @@
 .song-chord-token:hover { background: rgba(245, 154, 60, 0.35); }
 
 /* Ventana flotante del acorde */
-.song-chord-popup-layer {
+.song-chord-popup {
     position: fixed;
     z-index: 300;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    background: rgba(2, 8, 18, 0.45);
-}
-
-.song-chord-popup {
     width: 190px;
     padding: 10px 16px 18px;
     border: 1px solid rgba(180, 205, 225, 0.2);
