@@ -25,8 +25,7 @@
     position: relative;
     z-index: 50;
     /* PERMITE QUE LOS SUBMENÚS FLOTANTES SALGAN Y SOBREPASEN SIN RECORTARSE */
-    overflow-x: visible !important;
-    overflow-y: auto;
+    overflow: visible !important;
     padding: 24px 20px;
     border-right: 1px solid rgba(180, 205, 225, 0.15);
     background: #0b213f;
@@ -372,7 +371,8 @@
         width: min(88vw, 340px);
         transform: translateX(-105%);
         transition: transform 0.25s ease;
-        overflow-y: auto;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
     }
     .song-reader[data-menu-open="true"] .song-reader-sidebar { 
         transform: translateX(0); 
