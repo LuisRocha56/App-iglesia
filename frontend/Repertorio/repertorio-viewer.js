@@ -12,9 +12,11 @@
     let lightMode = false;
     let menuOpen = false;
     
-    // Opciones del nuevo menú
+    // Subpanel actualmente abierto ('tone', 'capo', 'instrument', 'cipher' o null)
+    let openSubmenu = null;
+
     let selectedInstrument = 'guitarra'; // 'guitarra', 'electrica', 'piano', 'bajo'
-    let selectedCipher = 'english'; // 'english' (C D E), 'spanish' (Do Re Mi), 'uppercase' (DO RE MI)
+    let selectedCipher = 'spanish'; // 'english', 'spanish', 'uppercase'
 
     const notesSpanish = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
     const notesEnglish = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -46,7 +48,6 @@
         return String(value || '').replace(/\r/g, '').split('\n');
     }
 
-    // Transposición y Cambio de Cifrado (Punto 6 y 8)
     function formatChordNote(semitoneIndex) {
         const normalizedIndex = (semitoneIndex % 12 + 12) % 12;
         if (selectedCipher === 'english') {
@@ -88,7 +89,6 @@
         }));
     }
 
-    // Diagramas según el instrumento seleccionado (Punto 5)
     function chordDiagram(chord) {
         const rootMatch = chord.match(/^((?:Do|Re|Mi|Fa|Sol|La|Si|[A-G])(?:#|b)?(?:m)?)/i);
         const name = rootMatch ? transposeChord(rootMatch[1]) : chord;
@@ -142,73 +142,98 @@
         `).join('');
     }
 
-    // Generación dinámica del menú
     function menuMarkup() {
-        const showCapo = selectedInstrument !== 'piano'; // Capo deshabilitado para piano (Punto 7)
+        const showCapo = selectedInstrument !== 'piano';
+        const currentNoteName = formatChordNote(semitonesMap['C'] + transpose);
 
         return `
             <div class="song-reader-toolbar">
                 <button class="song-reader-icon-button" data-action="close" aria-label="Cerrar lector">‹</button>
                 <button class="song-reader-icon-button" data-action="print" aria-label="Imprimir texto">▣</button>
-                <button class="song-reader-icon-button" data-action="download-pdf" aria-label="Descargar PDF">↓</button>
-                <button class="song-reader-icon-button" data-action="share-pdf" aria-label="Compartir PDF">↗</button>
+                <button class="song-reader-icon-button" data-action="download-pdf" aria-label="Descargar texto">↓</button>
+                <button class="song-reader-icon-button" data-action="share-pdf" aria-label="Compartir texto">↗</button>
             </div>
 
             <div class="song-reader-menu">
                 <div class="song-reader-menu-section">
                     <h3>Vista</h3>
-                    <button data-action="theme"><span>Tema</span><span>${lightMode ? 'Claro' : 'Oscuro'}</span></button>
-                    <button data-action="font-down"><span>Texto</span><span>100%</span></button>
-                    <button data-action="font-up"><span>Aumentar texto</span><span>+</span></button>
+                    <button class="song-reader-menu-item" data-action="theme"><span>Tema</span><span class="item-val">${lightMode ? 'Claro' : 'Oscuro'}</span></button>
+                    <button class="song-reader-menu-item" data-action="font-down"><span>Texto</span><span class="item-val">100%</span></button>
+                    <button class="song-reader-menu-item" data-action="font-up"><span>Aumentar texto</span><span class="item-val">+</span></button>
                 </div>
 
                 <div class="song-reader-menu-section">
-                    <h3>Instrumento</h3>
-                    <div class="instrument-selector">
-                        <button class="instrument-btn ${selectedInstrument === 'guitarra' ? 'active' : ''}" data-instrument="guitarra">${icons.guitarra} Guitarra</button>
-                        <button class="instrument-btn ${selectedInstrument === 'electrica' ? 'active' : ''}" data-instrument="electrica">${icons.electrica} Eléctrica</button>
-                        <button class="instrument-btn ${selectedInstrument === 'piano' ? 'active' : ''}" data-instrument="piano">${icons.piano} Piano</button>
-                        <button class="instrument-btn ${selectedInstrument === 'bajo' ? 'active' : ''}" data-instrument="bajo">${icons.bajo} Bajo</button>
+                    <h3>Ajustes Musicales</h3>
+                    
+                    <!-- 1. Ítem Instrumento -->
+                    <button class="song-reader-menu-item ${openSubmenu === 'instrument' ? 'active' : ''}" data-toggle-submenu="instrument">
+                        <span>Instrumento</span>
+                        <span class="item-val">${selectedInstrument.charAt(0).toUpperCase() + selectedInstrument.slice(1)} ›</span>
+                    </button>
+                    <div class="song-reader-submenu ${openSubmenu === 'instrument' ? 'open' : ''}">
+                        <div class="options-grid">
+                            <button class="option-btn ${selectedInstrument === 'guitarra' ? 'selected' : ''}" data-set-instrument="guitarra">${icons.guitarra} Guitarra</button>
+                            <button class="option-btn ${selectedInstrument === 'electrica' ? 'selected' : ''}" data-set-instrument="electrica">${icons.electrica} Eléctrica</button>
+                            <button class="option-btn ${selectedInstrument === 'piano' ? 'selected' : ''}" data-set-instrument="piano">${icons.piano} Piano</button>
+                            <button class="option-btn ${selectedInstrument === 'bajo' ? 'selected' : ''}" data-set-instrument="bajo">${icons.bajo} Bajo</button>
+                        </div>
                     </div>
 
-                    <!-- Control de Tono (Punto 6) -->
-                    <div class="song-reader-key-control">
-                        <div class="key-title">
-                            <span>Tono</span>
-                            <span>${transpose === 0 ? 'Original' : `${transpose > 0 ? '+' : ''}${transpose / 2} T`}</span>
+                    <!-- 2. Ítem Tono (-1/2 tono, +1/2 tono y tonos directos) -->
+                    <button class="song-reader-menu-item ${openSubmenu === 'tone' ? 'active' : ''}" data-toggle-submenu="tone">
+                        <span>Tono</span>
+                        <span class="item-val">${currentNoteName} (${transpose === 0 ? 'Original' : `${transpose > 0 ? '+' : ''}${transpose / 2} T`}) ›</span>
+                    </button>
+                    <div class="song-reader-submenu ${openSubmenu === 'tone' ? 'open' : ''}">
+                        <div class="tone-controls">
+                            <button class="tone-btn" data-action="transpose-down">-1/2 tono</button>
+                            <button class="tone-btn" data-action="transpose-up">+1/2 tono</button>
                         </div>
-                        <div class="key-buttons-grid">
-                            <button class="key-btn" data-action="transpose-down">-1/2 tono</button>
-                            <button class="key-btn" data-action="transpose-up">+1/2 tono</button>
+                        <div class="options-grid">
+                            ${notesSpanish.map((note, idx) => `
+                                <button class="option-btn ${((semitonesMap['C'] + transpose) % 12 + 12) % 12 === idx ? 'selected' : ''}" data-set-transpose="${idx}">
+                                    ${formatChordNote(idx)}
+                                </button>
+                            `).join('')}
                         </div>
-                        ${transpose !== 0 ? `<button class="key-reset-btn" data-action="transpose-reset">Restaurar tono</button>` : ''}
+                        ${transpose !== 0 ? `<button class="reset-btn" data-action="transpose-reset">Restaurar tono original</button>` : ''}
                     </div>
 
-                    <!-- Capo dinámico (Punto 7) -->
+                    <!-- 3. Ítem Capo (Desplegable) -->
                     ${showCapo ? `
-                    <div class="song-reader-row-option">
-                        <label>Capo</label>
-                        <select id="capoSelect">
-                            <option value="0" ${capo === 0 ? 'selected' : ''}>Sin capo</option>
-                            ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${capo === i + 1 ? 'selected' : ''}>${i + 1}.er traste</option>`).join('')}
-                        </select>
+                    <button class="song-reader-menu-item ${openSubmenu === 'capo' ? 'active' : ''}" data-toggle-submenu="capo">
+                        <span>Capo</span>
+                        <span class="item-val">${capo === 0 ? 'Sin capo' : `${capo}.er traste`} ›</span>
+                    </button>
+                    <div class="song-reader-submenu ${openSubmenu === 'capo' ? 'open' : ''}">
+                        <div class="options-grid">
+                            <button class="option-btn ${capo === 0 ? 'selected' : ''}" data-set-capo="0">Sin capo</button>
+                            ${Array.from({ length: 12 }, (_, i) => `
+                                <button class="option-btn ${capo === i + 1 ? 'selected' : ''}" data-set-capo="${i + 1}">
+                                    ${i + 1}º traste
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                     ` : ''}
 
-                    <!-- Opción de Cifrado (Punto 8) -->
-                    <div class="song-reader-row-option">
-                        <label>Cifrado</label>
-                        <select id="cipherSelect">
-                            <option value="english" ${selectedCipher === 'english' ? 'selected' : ''}>C D E F G A B</option>
-                            <option value="spanish" ${selectedCipher === 'spanish' ? 'selected' : ''}>Do Re Mi Fa Sol La Si</option>
-                            <option value="uppercase" ${selectedCipher === 'uppercase' ? 'selected' : ''}>DO RE MI FA SOL LA SI</option>
-                        </select>
+                    <!-- 4. Ítem Cifrado (Desplegable) -->
+                    <button class="song-reader-menu-item ${openSubmenu === 'cipher' ? 'active' : ''}" data-toggle-submenu="cipher">
+                        <span>Cifrado</span>
+                        <span class="item-val">${selectedCipher === 'english' ? 'C D E' : selectedCipher === 'spanish' ? 'Do Re Mi' : 'DO RE MI'} ›</span>
+                    </button>
+                    <div class="song-reader-submenu ${openSubmenu === 'cipher' ? 'open' : ''}">
+                        <div class="options-grid full-width">
+                            <button class="option-btn ${selectedCipher === 'english' ? 'selected' : ''}" data-set-cipher="english">C D E F G A B</button>
+                            <button class="option-btn ${selectedCipher === 'spanish' ? 'selected' : ''}" data-set-cipher="spanish">Do Re Mi Fa Sol La Si</button>
+                            <button class="option-btn ${selectedCipher === 'uppercase' ? 'selected' : ''}" data-set-cipher="uppercase">DO RE MI FA SOL LA SI</button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="song-reader-menu-section">
                     <h3>Contenido</h3>
-                    <button data-action="copy"><span>Copiar letra sin acordes</span><span>↗</span></button>
+                    <button class="song-reader-menu-item" data-action="copy"><span>Copiar letra sin acordes</span><span class="item-val">↗</span></button>
                 </div>
             </div>
         `;
@@ -218,7 +243,6 @@
         root.className = `song-reader${lightMode ? ' song-reader-light' : ''}`;
         root.dataset.menuOpen = menuOpen ? 'true' : 'false';
 
-        // Tono base e información del Capo (Punto 8)
         const currentTone = formatChordNote(semitonesMap['C'] + transpose);
         const capoText = capo > 0 ? ` · Capo: ${capo}.er traste` : '';
 
@@ -244,36 +268,51 @@
             </main>
         `;
 
-        // Listeners de los botones
+        // Handlers para abrir/cerrar submenús laterales
+        root.querySelectorAll('[data-toggle-submenu]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.toggleSubmenu;
+                openSubmenu = openSubmenu === target ? null : target;
+                render();
+            });
+        });
+
+        // Handlers para selección de opciones
+        root.querySelectorAll('[data-set-instrument]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                selectedInstrument = btn.dataset.setInstrument;
+                render();
+            });
+        });
+
+        root.querySelectorAll('[data-set-transpose]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const targetIndex = Number(btn.dataset.setTranspose);
+                transpose = targetIndex - semitonesMap['C'];
+                render();
+            });
+        });
+
+        root.querySelectorAll('[data-set-capo]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                capo = Number(btn.dataset.setCapo);
+                render();
+            });
+        });
+
+        root.querySelectorAll('[data-set-cipher]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                selectedCipher = btn.dataset.setCipher;
+                render();
+            });
+        });
+
+        // Acciones generales
         root.querySelectorAll('[data-action]').forEach((button) => {
             button.addEventListener('click', () => handleAction(button.dataset.action));
         });
-
-        root.querySelectorAll('[data-instrument]').forEach((button) => {
-            button.addEventListener('click', () => {
-                selectedInstrument = button.dataset.instrument;
-                render();
-            });
-        });
-
-        const capoSelect = root.querySelector('#capoSelect');
-        if (capoSelect) {
-            capoSelect.addEventListener('change', (e) => {
-                capo = Number(e.target.value);
-                render();
-            });
-        }
-
-        const cipherSelect = root.querySelector('#cipherSelect');
-        if (cipherSelect) {
-            cipherSelect.addEventListener('change', (e) => {
-                selectedCipher = e.target.value;
-                render();
-            });
-        }
     }
 
-    // Función auxiliar para generar PDF (Puntos 3 y 4)
     function generateSongText() {
         let content = `${song.title}\nAutor: ${song.author || 'Desconocido'}\n\n`;
         songLines().forEach(({ lyric, chord }) => {
@@ -309,16 +348,16 @@
         } else if (action === 'transpose-reset') {
             transpose = 0;
             render();
-        } else if (action === 'print') { // Punto 1: Solo imprime el texto
+        } else if (action === 'print') {
             window.print();
-        } else if (action === 'download-pdf') { // Punto 3: Genera descarga .txt/.pdf
+        } else if (action === 'download-pdf') {
             const content = generateSongText();
             const link = document.createElement('a');
             link.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
             link.download = `${song.title || 'cancion'}.txt`;
             link.click();
             URL.revokeObjectURL(link.href);
-        } else if (action === 'share-pdf') { // Punto 4: Compartir en PDF/Texto
+        } else if (action === 'share-pdf') {
             if (navigator.share) {
                 await navigator.share({
                     title: song.title,
@@ -338,6 +377,7 @@
         song = selectedSong;
         transpose = 0;
         capo = 0;
+        openSubmenu = null;
         menuOpen = false;
         render();
         root.hidden = false;
