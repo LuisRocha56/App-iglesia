@@ -2204,6 +2204,9 @@ Me acerco a ti"></textarea>
                 const resourceCell = document.createElement('td');
                 const links = document.createElement('div');
                 links.className = 'inline-actions';
+                const openReader = addTextElement(links, 'button', 'action-button', 'Abrir lector');
+                openReader.type = 'button';
+                openReader.addEventListener('click', () => showSongDetails(song));
                 addExternalLink(links, 'Acordes', song.chords_url);
                 addExternalLink(links, 'Partitura', song.sheet_url);
                 resourceCell.appendChild(links);
