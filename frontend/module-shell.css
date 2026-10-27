@@ -25,7 +25,7 @@ a { color: inherit; }
 .module-header {
     position: relative;
     overflow: hidden;
-    min-height: 270px;
+    min-height: 310px;
     padding: 24px max(18px, calc((100% - 1180px) / 2)) 90px;
     background:
         radial-gradient(circle at 88% 12%, rgba(103,192,255,.25) 0 145px, transparent 147px),
@@ -55,6 +55,40 @@ a { color: inherit; }
     gap: 18px;
     max-width: 1180px;
     margin: 0 auto;
+}
+
+.module-intro {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 1180px);
+    margin: 70px auto 0;
+}
+
+.module-intro p {
+    margin: 0 0 8px;
+    color: #6bc2f4;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.module-intro h1 {
+    max-width: 720px;
+    margin: 0;
+    color: #fff;
+    font-size: clamp(32px, 5vw, 58px);
+    letter-spacing: -.055em;
+    line-height: 1.04;
+}
+
+.module-intro span {
+    display: block;
+    max-width: 680px;
+    margin-top: 13px;
+    color: #d5ecfa;
+    font-size: 15px;
+    line-height: 1.55;
 }
 
 .module-brand {
@@ -206,8 +240,9 @@ a { color: inherit; }
 [hidden] { display: none !important; }
 
 @media (max-width: 650px) {
-    .module-header { min-height: 245px; padding: 18px 16px 82px; }
+    .module-header { min-height: 285px; padding: 18px 16px 82px; }
     .module-user span { max-width: 125px; overflow-wrap: anywhere; }
+    .module-intro { margin-top: 48px; }
     .module-main { width: min(100% - 22px, 1180px); }
     .module-nav { border-radius: 18px; padding: 9px; }
     .module-hero { display: block; }
