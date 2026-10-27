@@ -5,7 +5,8 @@
     inset: 0;
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
-    overflow: hidden;
+    overflow-x: hidden !important; /* Desactiva barras de scroll horizontal globales */
+    overflow-y: hidden;
     background: #051326;
     color: #f0f7fc;
     font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -22,10 +23,10 @@
 /* Sidebar lateral de controles */
 .song-reader-sidebar {
     position: relative;
-    z-index: 10;
-    /* PERMITE QUE LOS SUBMENÚS FLOTANTES SALGAN HACIA LA DERECHA SIN RECORTARSE */
+    z-index: 50;
+    /* PERMITE QUE LOS SUBMENÚS FLOTANTES SALGAN Y SOBREPASEN SIN RECORTARSE */
+    overflow-x: visible !important;
     overflow-y: auto;
-    overflow-x: visible;
     padding: 24px 20px;
     border-right: 1px solid rgba(180, 205, 225, 0.15);
     background: #0b213f;
@@ -64,8 +65,8 @@
 
 /* Sección contenedora del menú */
 .song-reader-menu-section {
-    position: relative; /* Base de referencia para el desplegable flotante */
-    overflow: visible !important; /* Importante para permitir que el desplegable salga hacia un lado */
+    position: relative; 
+    overflow: visible !important; /* Permite desbordamiento lateral */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     background: rgba(7, 24, 47, 0.5);
@@ -112,25 +113,25 @@
     color: #ffffff;
 }
 
-/* SUBMENÚ FLOTANTE LATERAL (WEB / PANTALLAS EN ESCRITORIO) */
+/* SUBMENÚ FLOTANTE QUE SOBREPASO EL ANCHO Y SE PONE POR ENCIMA */
 .song-reader-submenu {
     display: none;
     position: absolute;
-    left: 100%; /* Sale exactamente a la derecha del panel */
-    top: -10px;
-    margin-left: 12px;
-    width: 270px;
-    z-index: 100;
+    left: 100%; /* Inicia exactamente fuera de la barra lateral */
+    top: 0;
+    margin-left: 10px;
+    width: 280px;
+    z-index: 9999 !important; /* Capa superior para flotar sobre el contenido/canción */
     padding: 16px;
     border: 1px solid rgba(180, 205, 225, 0.25);
     border-radius: 16px;
     background: #0b213f;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
     animation: popupFade 0.2s ease-out;
 }
 
 .song-reader-submenu.open {
-    display: block;
+    display: block !important;
 }
 
 @keyframes popupFade {
@@ -138,7 +139,7 @@
     to { opacity: 1; transform: translateX(0); }
 }
 
-/* Estilos de la grilla interna del panel desplegado */
+/* Grilla interna de opciones */
 .options-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -226,6 +227,8 @@
 
 /* Área de lectura principal */
 .song-reader-main {
+    position: relative;
+    z-index: 1;
     min-width: 0;
     overflow: auto;
     background: radial-gradient(circle at 80% 10%, rgba(22, 134, 217, 0.12), transparent 45%), #07182f;
@@ -364,7 +367,7 @@
     }
     .song-reader-sidebar {
         position: absolute;
-        z-index: 4;
+        z-index: 50;
         inset: 0 auto 0 0;
         width: min(88vw, 340px);
         transform: translateX(-105%);
@@ -377,9 +380,6 @@
     .song-reader-content { 
         padding: 16px 18px 55px; 
     }
-
-    /* EN MÓVIL: EL SUBMENÚ DEJA DE SER FLOTANTE LATERAL Y SE CONVIERTE EN INLINE/ACORDEÓN
-       PARA EVITAR QUE SE SALGA DE LA PANTALLA TÁCTIL */
     .song-reader-submenu {
         position: static;
         width: 100%;

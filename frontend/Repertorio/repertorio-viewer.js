@@ -11,7 +11,7 @@
     let fontScale = 1;
     let lightMode = false;
     let menuOpen = false;
-    let openSubmenu = null; // Guardará el submenú activo ('instrument', 'tone', 'capo', 'cipher')
+    let openSubmenu = null;
 
     let selectedInstrument = 'guitarra';
     let selectedCipher = 'spanish';
