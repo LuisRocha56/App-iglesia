@@ -43,6 +43,16 @@ const roleNames = {
     5: 'Master',
     6: 'Miembro'
 };
+
+function normalizePersonName(value) {
+    return value
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLocaleLowerCase('es-MX')
+        .split(' ')
+        .map((word) => word ? `${word[0].toLocaleUpperCase('es-MX')}${word.slice(1)}` : word)
+        .join(' ');
+}
 const servicePositions = new Set([
     'Batería',
     'Corista',
@@ -653,7 +663,7 @@ app.post('/api/register', async (req, res, next) => {
             `INSERT INTO users (nombre, telefono, email, password_hash, area, category)
              VALUES ($1, $2, $3, $4, 6, $5)
              RETURNING id, nombre, area, role_ids, category`,
-            [nombre.trim(), telefono.trim(), normalizedEmail, passwordHash, normalizedCategory]
+            [normalizePersonName(nombre), telefono.trim(), normalizedEmail, passwordHash, normalizedCategory]
         );
         const user = { ...result.rows[0], ...getUserRoles(result.rows[0]) };
 
@@ -762,7 +772,7 @@ app.patch('/api/profile', getAuthenticatedUser, async (req, res, next) => {
              RETURNING id, nombre, telefono, email, area, role_ids, category,
                        address_street, address_neighborhood, house_number, whatsapp_opt_in`,
             [
-                nombre.trim(), telefono.trim(), normalizedEmail,
+                normalizePersonName(nombre), telefono.trim(), normalizedEmail,
                 addressStreet.trim(), addressNeighborhood.trim(), houseNumber.trim(),
                 typeof whatsappOptIn === 'boolean' ? whatsappOptIn : null,
                 req.auth.sub
@@ -1840,6 +1850,65 @@ app.delete('/api/resources/:id', getAuthenticatedUser, requireAreas([2, 3, 5]), 
     }
 });
 
+app.get('/api/multimedia-notices', getAuthenticatedUser, requireAreas([2, 3, 5]), async (_req, res, next) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, title, body, show_at, expires_at, mime_type, created_at,
+                    (file_data IS NOT NULL) AS has_file_data
+             FROM multimedia_notices
+             ORDER BY show_at DESC, created_at DESC
+             LIMIT 100`
+        );
+        res.json({ success: true, notices: result.rows });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/api/multimedia-notices/:id/content', getAuthenticatedUser, requireAreas([2, 3, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El aviso no es válido.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            'SELECT file_data, mime_type FROM multimedia_notices WHERE id = $1',
+            [req.params.id]
+        );
+        sendPrivateFile(res, result.rows[0]);
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/multimedia-notices', getAuthenticatedUser, requireAreas([3, 5]), parseUpload(upload.single('file')), async (req, res, next) => {
+    const { title, body = '', showAt, expiresAt = '' } = req.body || {};
+    const showDate = typeof showAt === 'string' ? new Date(showAt) : null;
+    const expiresDate = expiresAt ? new Date(expiresAt) : null;
+    if (typeof title !== 'string' || title.trim().length < 2 || title.trim().length > 160
+        || typeof body !== 'string' || body.length > 2000
+        || !showDate || Number.isNaN(showDate.getTime())
+        || (expiresDate && Number.isNaN(expiresDate.getTime()))
+        || (expiresDate && expiresDate <= showDate)
+        || !req.file || !req.file.mimetype.startsWith('image/') || !hasValidFileSignature(req.file)) {
+        res.status(400).json({ success: false, message: 'Revisa el título, las fechas y la imagen del aviso.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO multimedia_notices
+                (title, body, show_at, expires_at, file_data, mime_type, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING id, title, body, show_at, expires_at, mime_type, created_at`,
+            [title.trim(), body.trim(), showDate.toISOString(), expiresDate?.toISOString() || null,
+                req.file.buffer, req.file.mimetype, req.auth.sub]
+        );
+        res.status(201).json({ success: true, notice: result.rows[0] });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.get('/api/monitor-notes', getAuthenticatedUser, requireAreas([2, 4, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
@@ -2081,7 +2150,7 @@ app.post('/api/admin/users', getAuthenticatedUser, requireMaster, async (req, re
             `INSERT INTO users (nombre, telefono, email, password_hash, area, role_ids, category)
              VALUES ($1, $2, $3, $4, $5, $6, 'congregation')
              RETURNING id, nombre, telefono, email, area, role_ids, category, created_at`,
-            [nombre.trim(), telefono.trim(), normalizedEmail, passwordHash, areas[0], areas]
+            [normalizePersonName(nombre), telefono.trim(), normalizedEmail, passwordHash, areas[0], areas]
         );
         await pool.query(
             `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
@@ -2192,6 +2261,55 @@ app.patch('/api/admin/users/:id/role', getAuthenticatedUser, requireMaster, asyn
     }
 });
 
+app.delete('/api/admin/users/:id', getAuthenticatedUser, requireMaster, async (req, res, next) => {
+    const userId = req.params.id;
+    if (!/^[1-9]\d*$/.test(userId) || userId === String(req.auth.sub)) {
+        res.status(400).json({ success: false, message: 'No puedes eliminar tu propia cuenta o la cuenta no es válida.' });
+        return;
+    }
+    try {
+        const client = await pool.connect();
+        let result;
+        try {
+            await client.query('BEGIN');
+            await client.query('DELETE FROM service_assignments WHERE user_id = $1', [userId]);
+            await client.query('UPDATE service_assignments SET assigned_by = $1 WHERE assigned_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE prayer_requests SET author_id = $1 WHERE author_id = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE prayer_requests SET moderated_by = NULL WHERE moderated_by = $1', [userId]);
+            await client.query('UPDATE service_events SET created_by = $1 WHERE created_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE announcements SET created_by = $1 WHERE created_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE media_resources SET created_by = $1 WHERE created_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE multimedia_notices SET created_by = $1 WHERE created_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE sound_files SET uploaded_by = $1 WHERE uploaded_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE monitor_notes SET updated_by = $1 WHERE updated_by = $2', [req.auth.sub, userId]);
+            await client.query('UPDATE songs SET created_by = NULL WHERE created_by = $1', [userId]);
+            await client.query('UPDATE audit_logs SET actor_id = NULL WHERE actor_id = $1', [userId]);
+            result = await client.query(
+                'DELETE FROM users WHERE id = $1 RETURNING id, nombre',
+                [userId]
+            );
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+        if (!result.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró esa cuenta.' });
+            return;
+        }
+        await pool.query(
+            `INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
+             VALUES ($1, 'user.deleted', 'user', $2, $3)`,
+            [req.auth.sub, userId, JSON.stringify({ nombre: result.rows[0].nombre })]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.use((error, _req, res, _next) => {
     console.error('Error en el servidor:', error);
     const status = error.status === 403 ? 503 : error.status || 500;
@@ -2243,6 +2361,10 @@ async function startServer() {
         ALTER TABLE users
         ALTER COLUMN role_ids SET DEFAULT ARRAY[6]::INTEGER[],
         ALTER COLUMN role_ids SET NOT NULL
+    `);
+    await pool.query(`
+        UPDATE users
+        SET nombre = INITCAP(LOWER(TRIM(REGEXP_REPLACE(nombre, '\s+', ' ', 'g'))))
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS service_events (
@@ -2420,6 +2542,19 @@ async function startServer() {
         ADD COLUMN IF NOT EXISTS drive_file_id VARCHAR(100),
         ADD COLUMN IF NOT EXISTS file_data BYTEA,
         ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100)
+    `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS multimedia_notices (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            title VARCHAR(160) NOT NULL,
+            body VARCHAR(2000) NOT NULL DEFAULT '',
+            show_at TIMESTAMPTZ NOT NULL,
+            expires_at TIMESTAMPTZ,
+            file_data BYTEA NOT NULL,
+            mime_type VARCHAR(100) NOT NULL,
+            created_by BIGINT NOT NULL REFERENCES users(id),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS sound_files (

@@ -1,1 +1,5 @@
 @import url("../module-shell.css");
+.directory-search { width: 100%; min-height: 42px; margin: 0 0 16px; padding: 10px 12px; border: 1px solid #cfe0ec; border-radius: 11px; font: inherit; }
+.directory-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.directory-columns h3 { margin: 0 0 10px; }
+@media (max-width: 650px) { .directory-columns { grid-template-columns: 1fr; } }

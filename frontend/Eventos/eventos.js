@@ -8,6 +8,20 @@
     function date(value) {
         return new Intl.DateTimeFormat('es-MX', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(value));
     }
+    async function appendPrivateImage(item, service) {
+        if (!service.has_image && !service.image_url) return;
+        const image = document.createElement('img');
+        image.className = 'event-image';
+        image.alt = `Imagen de ${service.title}`;
+        image.loading = 'lazy';
+        item.append(image);
+        try {
+            image.src = service.image_url
+                || URL.createObjectURL(await MiIglesia.requestBlob(`/api/services/${service.id}/image`));
+        } catch (_error) {
+            image.remove();
+        }
+    }
     function render() {
         list.replaceChildren();
         if (!services.length) { list.innerHTML = '<p class="module-empty">No hay próximos eventos.</p>'; return; }
@@ -17,6 +31,7 @@
             item.querySelector('h3').textContent = `${service.event_type}: ${service.title}`;
             item.querySelector('.event-meta').textContent = date(service.starts_at);
             item.querySelector('.event-details').textContent = service.details || 'Sin detalles adicionales.';
+            appendPrivateImage(item, service);
             if (service.songs?.length) {
                 const songs = document.createElement('p'); songs.textContent = `Cantos: ${service.songs.map((song) => song.title).join(', ')}`; item.append(songs);
             }
@@ -35,7 +50,7 @@
         });
     }
     async function load() { try { ({ services } = await MiIglesia.request('/api/services')); render(); } catch (error) { status.textContent = error.message; } }
-    form?.addEventListener('submit', async (event) => { event.preventDefault(); const data = new FormData(form); const id = data.get('id'); try { await MiIglesia.request(id ? `/api/services/${id}` : '/api/services', { method: id ? 'PATCH' : 'POST', body: JSON.stringify({ title: data.get('title'), eventType: data.get('eventType'), startsAt: data.get('startsAt'), details: data.get('details') }) }); form.reset(); form.elements.id.value = ''; document.getElementById('cancelEvent').hidden = true; await load(); } catch (error) { document.getElementById('eventStatus').textContent = error.message; } });
+    form?.addEventListener('submit', async (event) => { event.preventDefault(); const data = new FormData(form); const id = data.get('id'); try { await MiIglesia.request(id ? `/api/services/${id}` : '/api/services', { method: id ? 'PATCH' : 'POST', body: data }); form.reset(); form.elements.id.value = ''; document.getElementById('cancelEvent').hidden = true; await load(); } catch (error) { document.getElementById('eventStatus').textContent = error.message; } });
     document.getElementById('cancelEvent')?.addEventListener('click', () => { form.reset(); form.elements.id.value = ''; document.getElementById('cancelEvent').hidden = true; });
     ModuleShell.start({ allowedAreas: [] }).then((context) => { if (context) { currentAreas = context.areas; document.querySelectorAll('[data-required-area="2"]').forEach((el) => { el.hidden = !currentAreas.includes(2) && !currentAreas.includes(5); }); load(); } });
 })();

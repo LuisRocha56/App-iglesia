@@ -30,6 +30,7 @@
             <label class="module-field">Tipo<select name="eventType"><option>Culto</option><option>Ensayo</option><option>Evento especial</option></select></label>
             <label class="module-field">Fecha y hora<input name="startsAt" type="datetime-local" required></label>
             <label class="module-field full">Detalles<textarea name="details" maxlength="2000"></textarea></label>
+            <label class="module-field full">Imagen del programa (opcional)<input name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp"></label>
             <button class="module-button" type="submit">Guardar evento</button><button class="module-button secondary" id="cancelEvent" type="button" hidden>Cancelar</button>
         </form><p class="module-status" id="eventStatus" role="status"></p>
     </section>
@@ -37,4 +38,3 @@
 </main>
 <script src="../../api-config.js"></script><script src="../../app.js"></script><script src="../module-shell.js"></script><script src="./eventos.js"></script><script src="../../pwa.js"></script>
 </body></html>
-
