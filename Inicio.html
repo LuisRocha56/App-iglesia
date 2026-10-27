@@ -11,7 +11,7 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/src/images/Logo/apple-touch-icon.png">
     <link rel="stylesheet" href="/pwa.css">
-    <link rel="stylesheet" href="/repertorio-viewer.css">
+    <link rel="stylesheet" href="/frontend/Repertorio/repertorio-viewer.css">
     <title>Inicio - Mi Iglesia</title>
     <style>
         :root {
@@ -1265,7 +1265,7 @@ Me acerco a ti"></textarea>
             const button = event.target.closest('[data-view]');
             if (button && !button.hidden) {
                 if (button.dataset.view === 'songs') {
-                    window.location.href = 'Repertorio.html';
+                    window.location.href = 'frontend/Repertorio/Repertorio.html';
                     return;
                 }
                 setActiveView(button.dataset.view);
@@ -3139,7 +3139,7 @@ Me acerco a ti"></textarea>
         checkNotifications();
         loadPage().then(() => { lastDataRefreshAt = Date.now(); });
     </script>
-    <script src="repertorio-viewer.js"></script>
+    <script src="frontend/Repertorio/repertorio-viewer.js"></script>
     <script src="pwa.js"></script>
 </body>
 </html>

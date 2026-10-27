@@ -43,7 +43,7 @@
     });
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js')
+        navigator.serviceWorker.register('/service-worker.js')
             .catch((error) => console.error('No se pudo registrar la aplicación instalable:', error));
     }
 

@@ -309,7 +309,7 @@
                 ? user.role_ids.map(Number)
                 : [Number(user.area)];
             if (!areas.some((area) => [1, 2, 3, 5].includes(area))) {
-                window.location.replace('Inicio.html');
+                window.location.replace('../../Inicio.html');
                 return;
             }
             $('#repertoireUserName').textContent = user.nombre;
@@ -321,7 +321,7 @@
         } catch (error) {
             if (error.status === 401) {
                 MiIglesia.clearToken();
-                window.location.replace('index.html');
+                window.location.replace('../../index.html');
             } else {
                 $('#songStatus').textContent = error.message || 'No se pudo cargar el repertorio.';
             }
