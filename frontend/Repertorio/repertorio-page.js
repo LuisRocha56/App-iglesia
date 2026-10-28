@@ -255,20 +255,54 @@
     async function loadSongs() {
         const result = await MiIglesia.request('/api/songs');
         songs = result.songs;
-        renderSongOptions();
         renderActivity();
         renderTable();
     }
 
     const commentStatusLabels = { pendiente: 'Pendiente', en_revision: 'En revisión', terminado: 'Terminado' };
+    const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-    function renderSongOptions() {
-        const select = $('#commentSong');
-        const current = select.value;
-        select.replaceChildren(new Option('Sin canción específica', ''));
-        songs.forEach((song) => select.appendChild(new Option(song.title, song.id)));
-        select.value = current;
+    function hideSongResults() {
+        $('#commentSongResults').hidden = true;
     }
+
+    function chooseCommentSong(song) {
+        $('#commentSongId').value = song ? song.id : '';
+        $('#commentSongSearch').value = song ? song.title : '';
+        hideSongResults();
+    }
+
+    function renderSongResults() {
+        const results = $('#commentSongResults');
+        const query = normalizeSearch($('#commentSongSearch').value.trim());
+        results.replaceChildren();
+        if (!query) {
+            hideSongResults();
+            return;
+        }
+        const matches = songs
+            .filter((song) => normalizeSearch(`${song.title} ${song.author || ''}`).includes(query))
+            .slice(0, 8);
+        if (!matches.length) {
+            text(results, 'p', 'song-picker-empty', 'No se encontró esa canción.');
+        }
+        matches.forEach((song) => {
+            const option = text(results, 'button', 'song-picker-option', song.title);
+            option.type = 'button';
+            option.setAttribute('role', 'option');
+            if (song.author) text(option, 'small', '', song.author);
+            option.addEventListener('mousedown', (event) => event.preventDefault());
+            option.addEventListener('click', () => chooseCommentSong(song));
+        });
+        results.hidden = false;
+    }
+
+    $('#commentSongSearch').addEventListener('input', () => {
+        $('#commentSongId').value = '';
+        renderSongResults();
+    });
+    $('#commentSongSearch').addEventListener('focus', renderSongResults);
+    $('#commentSongSearch').addEventListener('blur', hideSongResults);
 
     function setComments(comments) {
         const open = comments.filter((comment) => comment.status !== 'terminado').length;
@@ -501,7 +535,11 @@
                 $('.chord-tools').hidden = true;
             }
             await loadSongs();
-            await loadComments();
+            loadComments().catch((error) => {
+                $('#commentStatus').textContent = error.status === 404 || /JSON/.test(error.message)
+                    ? 'Los comentarios aún no están disponibles en el servidor.'
+                    : error.message;
+            });
         } catch (error) {
             if (error.status === 401) {
                 MiIglesia.clearToken();

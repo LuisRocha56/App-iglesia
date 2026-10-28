@@ -138,9 +138,11 @@ Me acerco a ti"></textarea>
                     <span id="commentsOpenCount" class="comments-count" hidden></span>
                 </div>
                 <form id="commentForm" class="comment-form">
-                    <select id="commentSong" name="songId" aria-label="Canción relacionada">
-                        <option value="">Sin canción específica</option>
-                    </select>
+                    <div class="song-picker">
+                        <input id="commentSongSearch" type="search" autocomplete="off" placeholder="Buscar canción (opcional)…" aria-label="Buscar canción relacionada">
+                        <input id="commentSongId" name="songId" type="hidden">
+                        <div id="commentSongResults" class="song-picker-results" role="listbox" hidden></div>
+                    </div>
                     <textarea name="body" rows="3" maxlength="1000" required placeholder="Ej. Revisar la letra de Alabaré, falta el puente"></textarea>
                     <button class="primary-button" type="submit">Dejar comentario</button>
                     <p id="commentStatus" class="form-status" role="status" aria-live="polite"></p>

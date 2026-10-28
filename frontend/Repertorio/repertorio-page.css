@@ -94,6 +94,15 @@ body {
 .comment-form { display:grid; gap:8px; margin-top:14px; }
 .comment-form select, .comment-form textarea, .comment-reply-form textarea, .comment-status-select { width:100%; padding:9px 11px; border:1px solid var(--repertoire-line); border-radius:10px; background:#fbfdff; color:var(--repertoire-ink); font:inherit; font-size:13px; }
 .comment-form textarea, .comment-reply-form textarea { resize:vertical; min-height:60px; }
+.song-picker { position:relative; }
+.song-picker input[type="search"] { width:100%; padding:9px 11px; border:1px solid var(--repertoire-line); border-radius:10px; background:#fbfdff; color:var(--repertoire-ink); font:inherit; font-size:13px; }
+.song-picker input[type="search"]:focus { outline:0; border-color:#56a9e2; box-shadow:0 0 0 4px rgba(57,153,218,.13); }
+.song-picker-results { position:absolute; z-index:5; top:calc(100% + 4px); right:0; left:0; display:grid; max-height:240px; overflow-y:auto; border:1px solid var(--repertoire-line); border-radius:10px; background:#fff; box-shadow:0 12px 30px rgba(31,74,115,.18); }
+.song-picker-option { display:grid; gap:1px; padding:8px 11px; border:0; border-bottom:1px solid var(--repertoire-line); background:none; color:var(--repertoire-ink); font:inherit; font-size:13px; font-weight:700; text-align:left; cursor:pointer; }
+.song-picker-option:last-child { border-bottom:0; }
+.song-picker-option:hover { background:#e8f5ff; }
+.song-picker-option small { color:var(--repertoire-muted); font-size:11px; font-weight:400; }
+.song-picker-empty { margin:0; padding:9px 11px; color:var(--repertoire-muted); font-size:12px; }
 .comment-form select:focus, .comment-form textarea:focus, .comment-reply-form textarea:focus, .comment-status-select:focus { outline:0; border-color:#56a9e2; box-shadow:0 0 0 4px rgba(57,153,218,.13); }
 .comment-list { display:grid; gap:10px; max-height:560px; margin-top:14px; overflow-y:auto; }
 .comment-item { display:grid; gap:8px; padding:12px; border:1px solid var(--repertoire-line); border-left:4px solid #e0a43a; border-radius:12px; background:#fff; }
