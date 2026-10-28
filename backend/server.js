@@ -1647,11 +1647,15 @@ app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (_
                     COALESCE(NULLIF(s.author, ''), s.artist) AS author,
                     s.has_sequence, s.lyrics, s.chords, s.chords_url, s.sheet_url,
                     s.created_at, s.updated_at,
+                    cu.nombre AS created_by_name,
+                    COALESCE(uu.nombre, cu.nombre) AS updated_by_name,
                     MAX(e.starts_at) FILTER (WHERE e.starts_at <= NOW()) AS last_played_at
              FROM songs s
+             LEFT JOIN users cu ON cu.id = s.created_by
+             LEFT JOIN users uu ON uu.id = s.updated_by
              LEFT JOIN service_songs ss ON ss.song_id = s.id
              LEFT JOIN service_events e ON e.id = ss.event_id
-             GROUP BY s.id
+             GROUP BY s.id, cu.nombre, uu.nombre
              ORDER BY s.title
              LIMIT 500`
         );
@@ -1720,12 +1724,12 @@ app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), as
         const result = await pool.query(
             `UPDATE songs
              SET title = $1, author = $2, artist = $3, has_sequence = $4,
-                 lyrics = $5, chords = $6, chords_url = $7, sheet_url = $8, updated_at = NOW()
+                 lyrics = $5, chords = $6, chords_url = $7, sheet_url = $8, updated_at = NOW(), updated_by = $10
              WHERE id = $9
              RETURNING id, title, author, has_sequence, lyrics, chords, chords_url, sheet_url, created_at, updated_at`,
             [
                 title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
-                lyrics.trimEnd(), chords.trimEnd(), chordsUrl || null, sheetUrl || null, req.params.id
+                lyrics.trimEnd(), chords.trimEnd(), chordsUrl || null, sheetUrl || null, req.params.id, req.auth.sub
             ]
         );
         if (!result.rowCount) {
@@ -2621,7 +2625,8 @@ async function startServer() {
         ADD COLUMN IF NOT EXISTS has_sequence BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS chords TEXT NOT NULL DEFAULT '',
         ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        ADD COLUMN IF NOT EXISTS catalog_key VARCHAR(64)
+        ADD COLUMN IF NOT EXISTS catalog_key VARCHAR(64),
+        ADD COLUMN IF NOT EXISTS updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL
     `);
     await pool.query(`
         ALTER TABLE songs

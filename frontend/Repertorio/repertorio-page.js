@@ -188,7 +188,8 @@
             const isNew = song.created_at && song.updated_at
                 && new Date(song.created_at).getTime() === new Date(song.updated_at).getTime();
             text(meta, 'span', `activity-badge${isNew ? '' : ' updated'}`, isNew ? 'Nueva' : 'Actualizada');
-            meta.append(document.createTextNode(date(song.updated_at || song.created_at)));
+            const who = isNew ? song.created_by_name : song.updated_by_name;
+            meta.append(document.createTextNode(`${who ? `${who} · ` : ''}${date(song.updated_at || song.created_at)}`));
             item.appendChild(meta);
             list.appendChild(item);
         });
