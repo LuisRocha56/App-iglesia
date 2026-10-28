@@ -91,14 +91,6 @@ C             G
 Me acerco a ti"></textarea>
                         <div class="composer-actions">
                             <button id="parseSongLines" class="secondary-button" type="button">Detectar líneas</button>
-                            <button id="addSongLine" class="secondary-button" type="button">Agregar línea</button>
-                        </div>
-                        <div class="chord-tools">
-                            <span>Nota rápida</span>
-                            <div id="songChordSuggestions"></div>
-                        </div>
-                        <div id="songLineEditor" class="song-line-editor">
-                            <p class="composer-empty">Pega la canción y pulsa “Detectar líneas”.</p>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -107,6 +99,25 @@ Me acerco a ti"></textarea>
                     </div>
                     <p id="songStatus" class="form-status" role="status" aria-live="polite"></p>
                 </form>
+                <dialog id="songLinesDialog" class="song-lines-dialog" aria-labelledby="songLinesTitle">
+                    <div class="song-lines-header">
+                        <div>
+                            <span class="section-kicker">Acomodar acordes</span>
+                            <h3 id="songLinesTitle">Líneas de la canción</h3>
+                        </div>
+                        <button id="closeSongLines" class="secondary-button" type="button">Listo</button>
+                    </div>
+                    <div class="song-lines-toolbar">
+                        <button id="addSongLine" class="secondary-button" type="button">Agregar línea</button>
+                        <div class="chord-tools">
+                            <span>Nota rápida</span>
+                            <div id="songChordSuggestions"></div>
+                        </div>
+                    </div>
+                    <div id="songLineEditor" class="song-line-editor">
+                        <p class="composer-empty">Pega la canción y pulsa “Detectar líneas”.</p>
+                    </div>
+                </dialog>
             </article>
 
             <aside class="repertoire-summary-card">

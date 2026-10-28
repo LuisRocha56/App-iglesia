@@ -278,7 +278,17 @@
     $('#parseSongLines').addEventListener('click', () => {
         composerLines = parseComposer($('#songPasteInput').value);
         renderComposer();
+        $('#songLinesDialog').showModal();
         $('#songStatus').textContent = 'Se separaron las líneas de letra y acordes.';
+    });
+    $('#closeSongLines').addEventListener('click', () => $('#songLinesDialog').close());
+    $('#songLinesDialog').addEventListener('close', () => {
+        $('#songPasteInput').value = composerLines
+            .map(({ chord, lyric }) => chord ? `${chord}\n${lyric}` : lyric)
+            .join('\n');
+    });
+    $('#songLinesDialog').addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
     });
     $('#addSongLine').addEventListener('click', () => {
         const at = activeLineIndex >= 0 && activeLineIndex < composerLines.length ? activeLineIndex + 1 : composerLines.length;
