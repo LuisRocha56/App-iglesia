@@ -92,18 +92,21 @@ body {
 .section-heading, .library-heading, .composer-heading { display:flex; align-items:start; justify-content:space-between; gap:16px; }
 .section-heading h2, .library-heading h2 { margin:0; color:var(--repertoire-ink); font-size:clamp(23px,3vw,31px); letter-spacing:-.04em; }
 .editor-badge { padding:6px 9px; border-radius:999px; background:#e9f5fd; color:#1179bb; font-size:11px; font-weight:800; }
-.repertoire-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; margin-top:22px; }
-.repertoire-form > label, .resource-fields label { display:grid; gap:6px; color:var(--repertoire-muted); font-size:12px; }
+.repertoire-form { display:grid; grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr); gap:15px 20px; margin-top:22px; }
+.song-details-fields { display:grid; align-content:start; gap:15px; }
+.song-details-fields > label, .resource-fields label { display:grid; gap:6px; color:var(--repertoire-muted); font-size:12px; }
 .repertoire-form input, .repertoire-form textarea, .library-search { width:100%; min-height:42px; padding:10px 12px; border:1px solid var(--repertoire-line); border-radius:11px; background:#fbfdff; color:var(--repertoire-ink); font:inherit; }
 .repertoire-form input:focus, .repertoire-form textarea:focus, .library-search:focus { outline:0; border-color:#56a9e2; box-shadow:0 0 0 4px rgba(57,153,218,.13); }
 .sequence-field { display:flex !important; width:max-content; align-items:center; gap:9px; min-height:42px; padding:8px 12px; border:1px solid var(--repertoire-line); border-radius:999px; }
 .sequence-field input { width:18px; min-height:18px; padding:0; accent-color:var(--repertoire-blue); }
-.composer-field, .resource-fields, .form-actions, .form-status { grid-column:1 / -1; }
+.resource-fields { display:grid; gap:15px; }
+.composer-field { grid-column:2; grid-row:1 / span 2; }
+.form-actions, .form-status { grid-column:1 / -1; }
 .composer-field { display:grid; gap:10px; }
 .composer-heading label { display:block; color:var(--repertoire-muted); font-size:12px; }
 .composer-heading small { display:block; margin-top:4px; color:#91a0ad; font-size:11px; }
 .text-button { padding:0; border:0; background:none; color:var(--repertoire-blue); font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
-.composer-field textarea { min-height:100px; resize:vertical; white-space:pre; }
+.composer-field textarea { height:clamp(320px, 55vh, 560px); min-height:320px; resize:vertical; white-space:pre; }
 .composer-actions, .form-actions, .chord-tools, .song-pagination { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .primary-button, .secondary-button { min-height:40px; padding:0 15px; border-radius:10px; font:inherit; font-weight:800; cursor:pointer; }
 .primary-button { border:0; background:linear-gradient(135deg,#278fe0,#166fc2); color:#fff; box-shadow:0 6px 15px rgba(28,118,195,.2); }
@@ -152,14 +155,18 @@ body {
 .song-pagination button:disabled { opacity:.45; cursor:not-allowed; }
 .page-status { color:var(--repertoire-muted); font-size:12px; }
 
+@media (max-width: 900px) {
+    .repertoire-form { grid-template-columns:1fr; }
+    .composer-field { grid-column:auto; grid-row:auto; }
+    .form-actions, .form-status { grid-column:auto; }
+}
+
 @media (max-width: 760px) {
     .repertoire-nav-actions span { display:none; }
     .repertoire-intro { margin-top:52px; }
     .repertoire-layout { grid-template-columns:1fr; }
     .repertoire-summary-card { display:none; }
-    .repertoire-form { grid-template-columns:1fr; }
-    .composer-field, .resource-fields, .form-actions, .form-status { grid-column:auto; }
-    .resource-fields { display:grid; gap:15px; }
+    .composer-field textarea { height:240px; min-height:200px; }
     .song-activity-card { grid-template-columns:1fr; gap:12px; }
     .library-heading { align-items:stretch; flex-direction:column; }
     .library-search { width:100%; }

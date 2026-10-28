@@ -54,16 +54,26 @@
                 </div>
                 <form id="songForm" class="repertoire-form">
                     <input name="songId" type="hidden">
-                    <label>Nombre de la canción
-                        <input name="title" maxlength="160" required>
-                    </label>
-                    <label>Autor
-                        <input name="author" maxlength="160">
-                    </label>
-                    <label class="sequence-field">
-                        <input name="hasSequence" type="checkbox" value="true">
-                        <span>Tiene secuencia</span>
-                    </label>
+                    <div class="song-details-fields">
+                        <label>Nombre de la canción
+                            <input name="title" maxlength="160" required>
+                        </label>
+                        <label>Autor
+                            <input name="author" maxlength="160">
+                        </label>
+                        <label class="sequence-field">
+                            <input name="hasSequence" type="checkbox" value="true">
+                            <span>Tiene secuencia</span>
+                        </label>
+                        <div class="resource-fields">
+                            <label>Enlace de acordes
+                                <input name="chordsUrl" type="url" maxlength="1000">
+                            </label>
+                            <label>Enlace de partitura
+                                <input name="sheetUrl" type="url" maxlength="1000">
+                            </label>
+                        </div>
+                    </div>
                     <div class="composer-field">
                         <div class="composer-heading">
                             <div>
@@ -90,14 +100,6 @@ Me acerco a ti"></textarea>
                         <div id="songLineEditor" class="song-line-editor">
                             <p class="composer-empty">Pega la canción y pulsa “Detectar líneas”.</p>
                         </div>
-                    </div>
-                    <div class="resource-fields">
-                        <label>Enlace de acordes
-                            <input name="chordsUrl" type="url" maxlength="1000">
-                        </label>
-                        <label>Enlace de partitura
-                            <input name="sheetUrl" type="url" maxlength="1000">
-                        </label>
                     </div>
                     <div class="form-actions">
                         <button class="primary-button" type="submit">Guardar canción</button>
