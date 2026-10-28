@@ -259,7 +259,6 @@
         renderTable();
     }
 
-    const commentStatusLabels = { pendiente: 'Pendiente', en_revision: 'En revisión', terminado: 'Terminado' };
     const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
     function hideSongResults() {
@@ -304,19 +303,55 @@
     $('#commentSongSearch').addEventListener('focus', renderSongResults);
     $('#commentSongSearch').addEventListener('blur', hideSongResults);
 
+    let commentsCache = [];
+    let openCommentId = null;
+    const lightLabels = { pendiente: 'Pendiente', en_revision: 'En revisión', terminado: 'Terminado' };
+
     function setComments(comments) {
+        commentsCache = comments;
         const open = comments.filter((comment) => comment.status !== 'terminado').length;
         const badge = $('#commentsOpenCount');
         badge.hidden = !open;
         badge.textContent = `${open} por atender`;
         const list = $('#commentList');
         list.replaceChildren();
-        if (!comments.length) {
-            text(list, 'p', 'composer-empty', 'No hay comentarios por ahora.');
-            return;
+        if (!comments.length) text(list, 'p', 'composer-empty', 'No hay comentarios por ahora.');
+        comments.forEach((comment) => list.appendChild(renderCommentRow(comment)));
+        if (openCommentId !== null) {
+            const current = comments.find((comment) => comment.id === openCommentId);
+            if (current) renderCommentDialog(current);
+            else $('#commentDialog').close();
         }
-        comments.forEach((comment) => list.appendChild(renderComment(comment)));
     }
+
+    function renderCommentRow(comment) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = `comment-row ${comment.status}`;
+        const dot = text(row, 'span', 'comment-dot', '');
+        dot.setAttribute('aria-hidden', 'true');
+        const info = text(row, 'span', 'comment-row-info', '');
+        text(info, 'strong', '', comment.author_name);
+        text(info, 'small', '', comment.song_title ? `♪ ${comment.song_title}` : 'Comentario general');
+        row.setAttribute('aria-label', `${comment.author_name}: ${lightLabels[comment.status]}`);
+        row.addEventListener('click', () => {
+            openCommentId = comment.id;
+            renderCommentDialog(comment);
+            if (!$('#commentDialog').open) $('#commentDialog').showModal();
+        });
+        return row;
+    }
+
+    function renderCommentDialog(comment) {
+        const body = $('#commentDialogBody');
+        body.replaceChildren(renderComment(comment));
+    }
+
+    $('#closeCommentDialog').addEventListener('click', () => $('#commentDialog').close());
+    $('#commentDialog').addEventListener('close', () => { openCommentId = null; });
+    $('#commentDialog').addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+    });
 
     async function commentRequest(path, method, body) {
         const status = $('#commentStatus');
@@ -341,13 +376,20 @@
         text(item, 'p', 'comment-body', comment.body);
 
         const controls = text(item, 'div', 'comment-controls', '');
-        const select = document.createElement('select');
-        select.className = 'comment-status-select';
-        select.setAttribute('aria-label', 'Estatus del comentario');
-        Object.entries(commentStatusLabels).forEach(([value, label]) => select.appendChild(new Option(label, value)));
-        select.value = comment.status;
-        select.addEventListener('change', () => commentRequest(`/api/song-comments/${comment.id}`, 'PATCH', { status: select.value }));
-        controls.appendChild(select);
+        const light = text(controls, 'div', 'traffic-light', '');
+        light.setAttribute('role', 'group');
+        light.setAttribute('aria-label', 'Estatus del comentario');
+        [['pendiente', 'red'], ['en_revision', 'yellow'], ['terminado', 'green']].forEach(([value, color]) => {
+            const bulb = text(light, 'button', `light ${color}${comment.status === value ? ' on' : ''}`, '');
+            bulb.type = 'button';
+            bulb.title = lightLabels[value];
+            bulb.setAttribute('aria-label', lightLabels[value]);
+            bulb.setAttribute('aria-pressed', String(comment.status === value));
+            bulb.addEventListener('click', () => {
+                if (comment.status !== value) commentRequest(`/api/song-comments/${comment.id}`, 'PATCH', { status: value });
+            });
+        });
+        text(controls, 'span', 'light-label', lightLabels[comment.status]);
         if (comment.is_mine || canDeleteAnyComment) {
             const remove = text(controls, 'button', 'comment-delete', 'Eliminar');
             remove.type = 'button';

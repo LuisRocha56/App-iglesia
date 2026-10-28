@@ -1785,6 +1785,7 @@ async function loadSongComments(userId) {
          FROM song_comments c
          LEFT JOIN songs s ON s.id = c.song_id
          LEFT JOIN users u ON u.id = c.created_by
+         WHERE c.status <> 'terminado' OR c.created_at > NOW() - INTERVAL '3 days'
          ORDER BY (c.status = 'terminado'), c.created_at DESC
          LIMIT 100`,
         [userId]
