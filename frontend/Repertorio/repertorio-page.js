@@ -116,25 +116,32 @@
     function startLineDrag(event, row, handle) {
         event.preventDefault();
         const editor = $('#songLineEditor');
-        handle.setPointerCapture(event.pointerId);
         row.classList.add('dragging');
+        // Mover la fila en el DOM libera la captura del puntero, por eso se escucha en document.
         const move = (e) => {
+            const bounds = editor.getBoundingClientRect();
+            if (e.clientY < bounds.top + 40) editor.scrollTop -= 14;
+            else if (e.clientY > bounds.bottom - 40) editor.scrollTop += 14;
             const siblings = [...editor.children].filter((el) => el !== row);
             const next = siblings.find((el) => e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2);
-            if (next) editor.insertBefore(row, next); else editor.appendChild(row);
+            if (next) {
+                if (row.nextSibling !== next) editor.insertBefore(row, next);
+            } else if (editor.lastElementChild !== row) {
+                editor.appendChild(row);
+            }
         };
         const end = () => {
-            handle.removeEventListener('pointermove', move);
-            handle.removeEventListener('pointerup', end);
-            handle.removeEventListener('pointercancel', end);
+            document.removeEventListener('pointermove', move);
+            document.removeEventListener('pointerup', end);
+            document.removeEventListener('pointercancel', end);
             const order = [...editor.children].map((el) => Number(el.dataset.index));
             composerLines = order.map((i) => composerLines[i]);
             activeLineIndex = order.indexOf(Number(row.dataset.index));
             renderComposer();
         };
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', end);
-        handle.addEventListener('pointercancel', end);
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', end);
+        document.addEventListener('pointercancel', end);
     }
 
     function loadComposer(lyrics, chords) {
