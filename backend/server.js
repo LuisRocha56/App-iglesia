@@ -1648,18 +1648,38 @@ app.get('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (_
                     s.has_sequence, s.lyrics, s.chords, s.chords_url, s.sheet_url,
                     s.created_at, s.updated_at,
                     cu.nombre AS created_by_name,
-                    COALESCE(uu.nombre, cu.nombre) AS updated_by_name,
+                    COALESCE(uu.nombre, au.nombre) AS updated_by_name,
                     MAX(e.starts_at) FILTER (WHERE e.starts_at <= NOW()) AS last_played_at
              FROM songs s
              LEFT JOIN users cu ON cu.id = s.created_by
              LEFT JOIN users uu ON uu.id = s.updated_by
+             LEFT JOIN LATERAL (
+                 SELECT actor.nombre
+                 FROM audit_logs l
+                 JOIN users actor ON actor.id = l.actor_id
+                 WHERE l.action = 'song.updated'
+                   AND l.target_type = 'song'
+                   AND l.target_id = s.id
+                 ORDER BY l.created_at DESC, l.id DESC
+                 LIMIT 1
+             ) au ON TRUE
              LEFT JOIN service_songs ss ON ss.song_id = s.id
              LEFT JOIN service_events e ON e.id = ss.event_id
-             GROUP BY s.id, cu.nombre, uu.nombre
+             GROUP BY s.id, cu.nombre, uu.nombre, au.nombre
              ORDER BY s.title
              LIMIT 500`
         );
-        res.json({ success: true, songs: result.rows });
+        const deletedSongs = await pool.query(
+            `SELECT l.details->>'title' AS title, l.created_at, u.nombre AS actor_name
+             FROM audit_logs l
+             LEFT JOIN users u ON u.id = l.actor_id
+             WHERE l.action = 'song.deleted'
+               AND l.target_type = 'song'
+               AND l.details ? 'title'
+             ORDER BY l.created_at DESC, l.id DESC
+             LIMIT 5`
+        );
+        res.json({ success: true, songs: result.rows, deletedSongs: deletedSongs.rows });
     } catch (error) {
         next(error);
     }
@@ -1753,16 +1773,26 @@ app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), a
         return;
     }
     try {
-        const result = await pool.query('DELETE FROM songs WHERE id = $1 RETURNING id', [req.params.id]);
+        const result = await pool.query(
+            `WITH deleted AS (
+                 DELETE FROM songs
+                 WHERE id = $1
+                 RETURNING id, title
+             ), logged AS (
+                 INSERT INTO audit_logs (actor_id, action, target_type, target_id, details)
+                 SELECT $2, 'song.deleted', 'song', deleted.id, jsonb_build_object('title', deleted.title)
+                 FROM deleted
+                 RETURNING id
+             )
+             SELECT deleted.id
+             FROM deleted
+             JOIN logged ON TRUE`,
+            [req.params.id, req.auth.sub]
+        );
         if (!result.rowCount) {
             res.status(404).json({ success: false, message: 'No se encontró esa canción.' });
             return;
         }
-        await pool.query(
-            `INSERT INTO audit_logs (actor_id, action, target_type, target_id)
-             VALUES ($1, 'song.deleted', 'song', $2)`,
-            [req.auth.sub, req.params.id]
-        );
         res.json({ success: true });
     } catch (error) {
         next(error);
@@ -2552,6 +2582,16 @@ async function startServer() {
             details JSONB NOT NULL DEFAULT '{}'::JSONB,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+    `);
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS audit_logs_song_updated_latest
+        ON audit_logs (target_id, created_at DESC, id DESC)
+        WHERE action = 'song.updated' AND target_type = 'song'
+    `);
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS audit_logs_song_deleted_latest
+        ON audit_logs (created_at DESC, id DESC)
+        WHERE action = 'song.deleted' AND target_type = 'song'
     `);
     await pool.query(`
         CREATE TABLE IF NOT EXISTS app_settings (

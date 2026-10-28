@@ -1,7 +1,10 @@
 (() => {
     const chordSuggestions = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
     const songsPerPage = 10;
+    const songRefreshErrorMessage = 'No se pudo actualizar el repertorio. Se volverá a intentar automáticamente.';
     let songs = [];
+    let deletedSongs = [];
+    let songLoadPromise = null;
     let currentPage = 1;
     let composerLines = [];
     let activeChordInput = null;
@@ -175,21 +178,35 @@
     function renderActivity() {
         const list = $('#songActivityList');
         list.replaceChildren();
-        const recent = [...songs]
-            .filter((song) => song.updated_at || song.created_at)
+        const recent = [
+            ...songs
+                .filter((song) => song.updated_at || song.created_at)
+                .map((song) => {
+                    const isNew = song.created_at && song.updated_at
+                        && new Date(song.created_at).getTime() === new Date(song.updated_at).getTime();
+                    return {
+                        title: song.title,
+                        created_at: song.created_at,
+                        updated_at: song.updated_at,
+                        actor_name: isNew ? song.created_by_name : song.updated_by_name,
+                        action: isNew ? 'Nueva' : 'Actualizada'
+                    };
+                }),
+            ...deletedSongs.map((song) => ({ ...song, action: 'Eliminada' }))
+        ]
             .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
             .slice(0, 5);
-        recent.forEach((song) => {
+        recent.forEach((activity) => {
             const item = document.createElement('div');
             item.className = 'activity-item';
-            text(item, 'strong', '', song.title);
+            text(item, 'strong', '', activity.title);
             const meta = document.createElement('span');
             meta.className = 'activity-meta';
-            const isNew = song.created_at && song.updated_at
-                && new Date(song.created_at).getTime() === new Date(song.updated_at).getTime();
-            text(meta, 'span', `activity-badge${isNew ? '' : ' updated'}`, isNew ? 'Nueva' : 'Actualizada');
-            const who = isNew ? song.created_by_name : song.updated_by_name;
-            meta.append(document.createTextNode(`${who ? `${who} · ` : ''}${date(song.updated_at || song.created_at)}`));
+            const badgeClass = activity.action === 'Nueva'
+                ? 'activity-badge'
+                : `activity-badge ${activity.action === 'Eliminada' ? 'deleted' : 'updated'}`;
+            text(meta, 'span', badgeClass, activity.action);
+            meta.append(document.createTextNode(`${activity.actor_name || 'Usuario sin registro'} · ${date(activity.updated_at || activity.created_at)}`));
             item.appendChild(meta);
             list.appendChild(item);
         });
@@ -254,10 +271,37 @@
     }
 
     async function loadSongs() {
-        const result = await MiIglesia.request('/api/songs');
-        songs = result.songs;
-        renderActivity();
-        renderTable();
+        if (songLoadPromise) return songLoadPromise;
+        songLoadPromise = (async () => {
+            const result = await MiIglesia.request('/api/songs');
+            songs = result.songs;
+            deletedSongs = result.deletedSongs || [];
+            renderActivity();
+            renderTable();
+        })();
+        try {
+            await songLoadPromise;
+        } finally {
+            songLoadPromise = null;
+        }
+    }
+
+    async function refreshSongsInBackground() {
+        if (document.hidden) return;
+        try {
+            await loadSongs();
+            if ($('#songStatus').textContent === songRefreshErrorMessage) {
+                $('#songStatus').textContent = '';
+            }
+        } catch (error) {
+            console.error('No se pudo actualizar el repertorio automáticamente:', error);
+            if (error.status === 401) {
+                MiIglesia.clearToken();
+                window.location.replace('../../index.html');
+                return;
+            }
+            $('#songStatus').textContent = songRefreshErrorMessage;
+        }
     }
 
     const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -578,6 +622,10 @@
                 $('.chord-tools').hidden = true;
             }
             await loadSongs();
+            window.setInterval(refreshSongsInBackground, 10000);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) refreshSongsInBackground();
+            });
             loadComments().catch((error) => {
                 $('#commentStatus').textContent = error.status === 404 || /JSON/.test(error.message)
                     ? 'Los comentarios aún no están disponibles en el servidor.'

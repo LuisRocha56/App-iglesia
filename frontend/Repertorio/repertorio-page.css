@@ -205,6 +205,7 @@ body {
 .activity-meta { color:var(--repertoire-muted); font-size:11px; text-align:right; }
 .activity-badge { display:inline-block; margin-right:6px; padding:3px 6px; border-radius:999px; background:#e5f5ec; color:#197044; font-size:9px; font-weight:800; text-transform:uppercase; }
 .activity-badge.updated { background:#e8f1ff; color:#2860a8; }
+.activity-badge.deleted { background:#fde8e8; color:#a83232; }
 .library-table-wrap { overflow:auto; border:1px solid var(--repertoire-line); border-radius:14px; }
 .library-table-wrap table { width:100%; border-collapse:collapse; text-align:left; }
 .library-table-wrap th, .library-table-wrap td { padding:13px; border-bottom:1px solid var(--repertoire-line); vertical-align:middle; }
