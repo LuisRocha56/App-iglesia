@@ -6,6 +6,7 @@
     let composerLines = [];
     let activeChordInput = null;
     let activeLineIndex = -1;
+    let pasteDirty = false;
     let canManageChords = true;
     window.getRepertorioSongs = () => songs;
 
@@ -166,6 +167,7 @@
         $('#cancelSongEdit').hidden = true;
         composerLines = [];
         activeLineIndex = -1;
+        pasteDirty = false;
         renderComposer();
     }
 
@@ -282,7 +284,9 @@
         }
     }
 
+    $('#songPasteInput').addEventListener('input', () => { pasteDirty = true; });
     $('#parseSongLines').addEventListener('click', () => {
+        pasteDirty = false;
         composerLines = parseComposer($('#songPasteInput').value);
         renderComposer();
         $('#songLinesDialog').showModal();
@@ -334,6 +338,11 @@
     $('#songForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
+        if (pasteDirty && $('#songPasteInput').value.trim()) {
+            composerLines = parseComposer($('#songPasteInput').value);
+            renderComposer();
+        }
+        pasteDirty = false;
         syncComposer();
         const data = new FormData(form);
         const songId = String(data.get('songId') || '');
