@@ -1683,7 +1683,7 @@ app.post('/api/songs', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (
              RETURNING id, title, author, has_sequence, lyrics, chords, chords_url, sheet_url, created_at, updated_at`,
             [
                 title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
-                lyrics.trim(), chords.trim(), chordsUrl || null, sheetUrl || null, req.auth.sub
+                lyrics.trimEnd(), chords.trimEnd(), chordsUrl || null, sheetUrl || null, req.auth.sub
             ]
         );
         await pool.query(
@@ -1725,7 +1725,7 @@ app.patch('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), as
              RETURNING id, title, author, has_sequence, lyrics, chords, chords_url, sheet_url, created_at, updated_at`,
             [
                 title.trim(), author.trim() || artist.trim(), artist.trim(), hasSequence,
-                lyrics.trim(), chords.trim(), chordsUrl || null, sheetUrl || null, req.params.id
+                lyrics.trimEnd(), chords.trimEnd(), chordsUrl || null, sheetUrl || null, req.params.id
             ]
         );
         if (!result.rowCount) {
