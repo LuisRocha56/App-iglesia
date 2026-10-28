@@ -1765,6 +1765,128 @@ app.delete('/api/songs/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), a
     }
 });
 
+const songCommentStatuses = ['pendiente', 'en_revision', 'terminado'];
+
+async function loadSongComments(userId) {
+    const result = await pool.query(
+        `SELECT c.id, c.song_id, s.title AS song_title, c.body, c.status,
+                c.created_at, c.updated_at,
+                COALESCE(u.nombre, 'Usuario eliminado') AS author_name,
+                (c.created_by = $1) AS is_mine,
+                COALESCE((
+                    SELECT json_agg(json_build_object(
+                        'id', r.id, 'body', r.body, 'created_at', r.created_at,
+                        'author_name', COALESCE(ru.nombre, 'Usuario eliminado')
+                    ) ORDER BY r.created_at)
+                    FROM song_comment_replies r
+                    LEFT JOIN users ru ON ru.id = r.created_by
+                    WHERE r.comment_id = c.id
+                ), '[]'::json) AS replies
+         FROM song_comments c
+         LEFT JOIN songs s ON s.id = c.song_id
+         LEFT JOIN users u ON u.id = c.created_by
+         ORDER BY (c.status = 'terminado'), c.created_at DESC
+         LIMIT 100`,
+        [userId]
+    );
+    return result.rows;
+}
+
+app.get('/api/song-comments', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
+    try {
+        res.json({ success: true, comments: await loadSongComments(req.auth.sub) });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/song-comments', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
+    const { body, songId = null } = req.body || {};
+    const cleanBody = typeof body === 'string' ? body.trim() : '';
+    if (cleanBody.length < 3 || cleanBody.length > 1000
+        || (songId !== null && songId !== '' && !/^[1-9]\d*$/.test(String(songId)))) {
+        res.status(400).json({ success: false, message: 'Escribe un comentario de 3 a 1000 caracteres.' });
+        return;
+    }
+    try {
+        await pool.query(
+            `INSERT INTO song_comments (song_id, body, created_by)
+             VALUES ((SELECT id FROM songs WHERE id = $1), $2, $3)`,
+            [songId ? String(songId) : null, cleanBody, req.auth.sub]
+        );
+        res.status(201).json({ success: true, comments: await loadSongComments(req.auth.sub) });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.patch('/api/song-comments/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
+    const { status } = req.body || {};
+    if (!/^[1-9]\d*$/.test(req.params.id) || !songCommentStatuses.includes(status)) {
+        res.status(400).json({ success: false, message: 'El estatus no es válido.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            'UPDATE song_comments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+            [status, req.params.id]
+        );
+        if (!result.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró ese comentario.' });
+            return;
+        }
+        res.json({ success: true, comments: await loadSongComments(req.auth.sub) });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/api/song-comments/:id/replies', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
+    const cleanBody = typeof req.body?.body === 'string' ? req.body.body.trim() : '';
+    if (!/^[1-9]\d*$/.test(req.params.id) || cleanBody.length < 2 || cleanBody.length > 1000) {
+        res.status(400).json({ success: false, message: 'Escribe una respuesta de 2 a 1000 caracteres.' });
+        return;
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO song_comment_replies (comment_id, body, created_by)
+             SELECT id, $2, $3 FROM song_comments WHERE id = $1
+             RETURNING id`,
+            [req.params.id, cleanBody, req.auth.sub]
+        );
+        if (!result.rowCount) {
+            res.status(404).json({ success: false, message: 'No se encontró ese comentario.' });
+            return;
+        }
+        await pool.query('UPDATE song_comments SET updated_at = NOW() WHERE id = $1', [req.params.id]);
+        res.status(201).json({ success: true, comments: await loadSongComments(req.auth.sub) });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.delete('/api/song-comments/:id', getAuthenticatedUser, requireAreas([1, 2, 3, 5]), async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        res.status(400).json({ success: false, message: 'El comentario no es válido.' });
+        return;
+    }
+    try {
+        const roles = await pool.query('SELECT role_ids, area FROM users WHERE id = $1', [req.auth.sub]);
+        const isMaster = getUserRoles(roles.rows[0]).areas.includes(5);
+        const result = await pool.query(
+            'DELETE FROM song_comments WHERE id = $1 AND ($2::boolean OR created_by = $3) RETURNING id',
+            [req.params.id, isMaster, req.auth.sub]
+        );
+        if (!result.rowCount) {
+            res.status(404).json({ success: false, message: 'No puedes eliminar ese comentario.' });
+            return;
+        }
+        res.json({ success: true, comments: await loadSongComments(req.auth.sub) });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.get('/api/resources', getAuthenticatedUser, requireAreas([2, 3, 5]), async (_req, res, next) => {
     try {
         const result = await pool.query(
@@ -2507,6 +2629,27 @@ async function startServer() {
     await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS songs_catalog_key_unique
         ON songs (catalog_key)
+    `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS song_comments (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            song_id BIGINT REFERENCES songs(id) ON DELETE SET NULL,
+            body TEXT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pendiente'
+                CHECK (status IN ('pendiente', 'en_revision', 'terminado')),
+            created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS song_comment_replies (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            comment_id BIGINT NOT NULL REFERENCES song_comments(id) ON DELETE CASCADE,
+            body TEXT NOT NULL,
+            created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
     `);
     const songCatalog = seedSongs.map((song) => ({
         title: song.title,

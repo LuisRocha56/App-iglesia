@@ -85,7 +85,33 @@ body {
     background:#e8f5ff;
     color:#0877c1;
 }
-.repertoire-layout { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:18px; align-items:start; }
+.repertoire-layout { display:grid; grid-template-columns:minmax(0, 1fr) 300px; gap:18px; align-items:start; }
+.repertoire-side { display:grid; gap:18px; }
+.repertoire-comments-card { padding:22px; border:1px solid rgba(255,255,255,.86); border-radius:24px; background:rgba(255,255,255,.93); box-shadow:0 16px 40px rgba(31,74,115,.1); backdrop-filter:blur(16px); }
+.comments-heading { display:flex; align-items:start; justify-content:space-between; gap:10px; }
+.comments-heading h3 { margin:0; color:var(--repertoire-ink); font-size:20px; letter-spacing:-.03em; }
+.comments-count { padding:4px 9px; border-radius:999px; background:#fff1d6; color:#a15c00; font-size:11px; font-weight:800; }
+.comment-form { display:grid; gap:8px; margin-top:14px; }
+.comment-form select, .comment-form textarea, .comment-reply-form textarea, .comment-status-select { width:100%; padding:9px 11px; border:1px solid var(--repertoire-line); border-radius:10px; background:#fbfdff; color:var(--repertoire-ink); font:inherit; font-size:13px; }
+.comment-form textarea, .comment-reply-form textarea { resize:vertical; min-height:60px; }
+.comment-form select:focus, .comment-form textarea:focus, .comment-reply-form textarea:focus, .comment-status-select:focus { outline:0; border-color:#56a9e2; box-shadow:0 0 0 4px rgba(57,153,218,.13); }
+.comment-list { display:grid; gap:10px; max-height:560px; margin-top:14px; overflow-y:auto; }
+.comment-item { display:grid; gap:8px; padding:12px; border:1px solid var(--repertoire-line); border-left:4px solid #e0a43a; border-radius:12px; background:#fff; }
+.comment-item.en_revision { border-left-color:#2b8fdc; }
+.comment-item.terminado { border-left-color:#2fa86b; opacity:.8; }
+.comment-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; color:var(--repertoire-muted); font-size:11px; }
+.comment-meta strong { color:var(--repertoire-ink); }
+.comment-song { color:#147dbd; font-size:11px; font-weight:800; }
+.comment-body { margin:0; color:var(--repertoire-ink); font-size:13px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+.comment-controls { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.comment-status-select { width:auto; padding:5px 8px; font-size:12px; font-weight:800; }
+.comment-delete { padding:0; border:0; background:none; color:#9b2631; font:inherit; font-size:11px; font-weight:800; cursor:pointer; }
+.comment-replies { display:grid; gap:6px; padding-left:10px; border-left:2px solid var(--repertoire-line); }
+.comment-reply { display:grid; gap:2px; }
+.comment-reply .comment-body { font-size:12px; }
+.comment-reply-form { display:grid; gap:6px; }
+.comment-reply-form textarea { min-height:44px; }
+.comment-reply-form button { justify-self:start; min-height:32px; padding:0 12px; border:1px solid var(--repertoire-line); border-radius:8px; background:#fff; color:var(--repertoire-blue); font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
 .repertoire-editor-card, .repertoire-summary-card, .repertoire-library { border:1px solid rgba(255,255,255,.86); border-radius:24px; background:rgba(255,255,255,.93); box-shadow:0 16px 40px rgba(31,74,115,.1); backdrop-filter:blur(16px); }
 .repertoire-editor-card { padding:clamp(21px, 3vw, 32px); }
 .repertoire-summary-card { padding:24px; color:var(--repertoire-muted); }

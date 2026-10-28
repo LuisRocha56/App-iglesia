@@ -7,6 +7,7 @@
     let activeChordInput = null;
     let activeLineIndex = -1;
     let pasteDirty = false;
+    let canDeleteAnyComment = false;
     let canManageChords = true;
     window.getRepertorioSongs = () => songs;
 
@@ -254,9 +255,121 @@
     async function loadSongs() {
         const result = await MiIglesia.request('/api/songs');
         songs = result.songs;
+        renderSongOptions();
         renderActivity();
         renderTable();
     }
+
+    const commentStatusLabels = { pendiente: 'Pendiente', en_revision: 'En revisión', terminado: 'Terminado' };
+
+    function renderSongOptions() {
+        const select = $('#commentSong');
+        const current = select.value;
+        select.replaceChildren(new Option('Sin canción específica', ''));
+        songs.forEach((song) => select.appendChild(new Option(song.title, song.id)));
+        select.value = current;
+    }
+
+    function setComments(comments) {
+        const open = comments.filter((comment) => comment.status !== 'terminado').length;
+        const badge = $('#commentsOpenCount');
+        badge.hidden = !open;
+        badge.textContent = `${open} por atender`;
+        const list = $('#commentList');
+        list.replaceChildren();
+        if (!comments.length) {
+            text(list, 'p', 'composer-empty', 'No hay comentarios por ahora.');
+            return;
+        }
+        comments.forEach((comment) => list.appendChild(renderComment(comment)));
+    }
+
+    async function commentRequest(path, method, body) {
+        const status = $('#commentStatus');
+        try {
+            const result = await MiIglesia.request(path, { method, body: body && JSON.stringify(body) });
+            setComments(result.comments);
+            status.textContent = '';
+            return true;
+        } catch (error) {
+            status.textContent = error.message;
+            return false;
+        }
+    }
+
+    function renderComment(comment) {
+        const item = document.createElement('article');
+        item.className = `comment-item ${comment.status}`;
+        const meta = text(item, 'div', 'comment-meta', '');
+        text(meta, 'strong', '', comment.author_name);
+        text(meta, 'span', '', date(comment.created_at));
+        if (comment.song_title) text(item, 'span', 'comment-song', `♪ ${comment.song_title}`);
+        text(item, 'p', 'comment-body', comment.body);
+
+        const controls = text(item, 'div', 'comment-controls', '');
+        const select = document.createElement('select');
+        select.className = 'comment-status-select';
+        select.setAttribute('aria-label', 'Estatus del comentario');
+        Object.entries(commentStatusLabels).forEach(([value, label]) => select.appendChild(new Option(label, value)));
+        select.value = comment.status;
+        select.addEventListener('change', () => commentRequest(`/api/song-comments/${comment.id}`, 'PATCH', { status: select.value }));
+        controls.appendChild(select);
+        if (comment.is_mine || canDeleteAnyComment) {
+            const remove = text(controls, 'button', 'comment-delete', 'Eliminar');
+            remove.type = 'button';
+            remove.addEventListener('click', () => {
+                if (window.confirm('¿Eliminar este comentario y sus respuestas?')) {
+                    commentRequest(`/api/song-comments/${comment.id}`, 'DELETE');
+                }
+            });
+        }
+
+        if (comment.replies.length) {
+            const replies = text(item, 'div', 'comment-replies', '');
+            comment.replies.forEach((reply) => {
+                const entry = text(replies, 'div', 'comment-reply', '');
+                const replyMeta = text(entry, 'div', 'comment-meta', '');
+                text(replyMeta, 'strong', '', reply.author_name);
+                text(replyMeta, 'span', '', date(reply.created_at));
+                text(entry, 'p', 'comment-body', reply.body);
+            });
+        }
+
+        const form = document.createElement('form');
+        form.className = 'comment-reply-form';
+        const area = document.createElement('textarea');
+        area.rows = 2;
+        area.maxLength = 1000;
+        area.required = true;
+        area.placeholder = 'Responder…';
+        const send = text(form, 'button', '', 'Responder');
+        send.type = 'submit';
+        form.prepend(area);
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            commentRequest(`/api/song-comments/${comment.id}/replies`, 'POST', { body: area.value });
+        });
+        item.appendChild(form);
+        return item;
+    }
+
+    async function loadComments() {
+        const result = await MiIglesia.request('/api/song-comments');
+        setComments(result.comments);
+    }
+
+    $('#commentForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        const saved = await commentRequest('/api/song-comments', 'POST', {
+            body: form.elements.body.value,
+            songId: form.elements.songId.value || null
+        });
+        if (saved) form.reset();
+        button.disabled = false;
+    });
 
     function startEdit(song) {
         const form = $('#songForm');
@@ -383,10 +496,12 @@
             }
             $('#repertoireUserName').textContent = user.nombre;
             canManageChords = areas.some((area) => [1, 2, 5].includes(area));
+            canDeleteAnyComment = areas.includes(5);
             if (!canManageChords) {
                 $('.chord-tools').hidden = true;
             }
             await loadSongs();
+            await loadComments();
         } catch (error) {
             if (error.status === 401) {
                 MiIglesia.clearToken();
