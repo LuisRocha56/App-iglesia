@@ -1,8 +1,10 @@
 (() => {
     const chordSuggestions = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
     const songsPerPage = 10;
-    const songRefreshErrorMessage = 'No se pudo actualizar el repertorio. Se volverá a intentar automáticamente.';
+    const songLoadingMessage = 'Cargando repertorio…';
+    const songRefreshErrorMessage = 'No se pudo cargar el repertorio. Se volverá a intentar automáticamente.';
     let songs = [];
+    let songsLoaded = false;
     let deletedSongs = [];
     let songLoadPromise = null;
     let currentPage = 1;
@@ -270,14 +272,33 @@
         next.addEventListener('click', () => { currentPage += 1; renderTable(); });
     }
 
+    function renderSongLoadState(message) {
+        $('#songCount').textContent = '—';
+        $('#songResultsMeta').textContent = message;
+        const list = $('#songList');
+        list.replaceChildren();
+        const row = document.createElement('tr');
+        const cell = text(row, 'td', '', message);
+        cell.colSpan = 5;
+        list.appendChild(row);
+        $('#songPagination').replaceChildren();
+    }
+
     async function loadSongs() {
         if (songLoadPromise) return songLoadPromise;
         songLoadPromise = (async () => {
             const result = await MiIglesia.request('/api/songs');
+            if (!Array.isArray(result.songs)) {
+                throw new Error('El servidor devolvió una respuesta inválida al cargar el repertorio.');
+            }
             songs = result.songs;
             deletedSongs = result.deletedSongs || [];
             renderActivity();
             renderTable();
+            songsLoaded = true;
+            if ([songLoadingMessage, songRefreshErrorMessage].includes($('#songStatus').textContent)) {
+                $('#songStatus').textContent = '';
+            }
         })();
         try {
             await songLoadPromise;
@@ -301,6 +322,7 @@
                 return;
             }
             $('#songStatus').textContent = songRefreshErrorMessage;
+            if (!songsLoaded) renderSongLoadState(songRefreshErrorMessage);
         }
     }
 
@@ -605,6 +627,9 @@
         }
     });
 
+    renderSongLoadState(songLoadingMessage);
+    $('#songStatus').textContent = songLoadingMessage;
+
     (async () => {
         try {
             const { user } = await MiIglesia.request('/api/auth/me');
@@ -621,11 +646,18 @@
             if (!canManageChords) {
                 $('.chord-tools').hidden = true;
             }
-            await loadSongs();
             window.setInterval(refreshSongsInBackground, 10000);
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) refreshSongsInBackground();
             });
+            try {
+                await loadSongs();
+            } catch (error) {
+                if (error.status === 401) throw error;
+                console.error('No se pudo cargar el repertorio inicialmente:', error);
+                $('#songStatus').textContent = songRefreshErrorMessage;
+                renderSongLoadState(songRefreshErrorMessage);
+            }
             loadComments().catch((error) => {
                 $('#commentStatus').textContent = error.status === 404 || /JSON/.test(error.message)
                     ? 'Los comentarios aún no están disponibles en el servidor.'
